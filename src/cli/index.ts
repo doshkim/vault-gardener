@@ -29,6 +29,10 @@ export function run(argv: string[]): void {
     .option('--tier <tier>', 'Override tier (power, fast)')
     .option('--dry-run', 'Show what would run without executing')
     .option('--verbose', 'Stream LLM output to terminal')
+    .option('--force-unlock', 'Force-release lock before running')
+    .option('--no-queue', 'Fail immediately if locked (do not queue)')
+    .option('--force', 'Skip preflight checks')
+    .option('--validate', 'Run preflight only, then exit')
     .action(runCommand);
 
   program
@@ -47,6 +51,11 @@ export function run(argv: string[]): void {
     .description('Show TUI dashboard with run history and vault health')
     .option('--json', 'Output as JSON instead of TUI')
     .action(statusCommand);
+
+  program
+    .command('recover')
+    .description('Diagnose and fix stale state (locks, queue, metrics)')
+    .action(recoverAction);
 
   const config = program
     .command('config')
@@ -86,4 +95,9 @@ async function configSetAction(key: string, value: string): Promise<void> {
 async function configRegenAction(): Promise<void> {
   const { configRegen } = await import('./config.js');
   await configRegen();
+}
+
+async function recoverAction(): Promise<void> {
+  const { recoverCommand } = await import('./recover.js');
+  await recoverCommand();
 }

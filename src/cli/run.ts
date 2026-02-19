@@ -1,4 +1,5 @@
 import { join } from 'node:path';
+import { writeFile } from 'node:fs/promises';
 import chalk from 'chalk';
 import ora from 'ora';
 import {
@@ -7,7 +8,12 @@ import {
   resolveModel,
   resolveTimeout,
 } from './config.js';
-import { acquireLock, releaseLock } from '../lock/index.js';
+import { acquireLock, acquireOrQueue, forceRelease } from '../lock/index.js';
+import type { LockHandle } from '../lock/index.js';
+import type { QueueEntry } from '../queue/index.js';
+import { createLogger } from '../logging/index.js';
+import { runPreflight } from '../preflight/index.js';
+import { notifyFailure } from '../notify/index.js';
 import { collectPreMetrics, collectPostMetrics, writeMetrics } from '../metrics/collector.js';
 import { formatSummary } from '../metrics/format.js';
 import type { ProviderName, Tier, RunOptions } from '../providers/types.js';
@@ -20,6 +26,10 @@ interface RunCommandOptions {
   tier?: string;
   dryRun?: boolean;
   verbose?: boolean;
+  forceUnlock?: boolean;
+  noQueue?: boolean;
+  force?: boolean;
+  validate?: boolean;
 }
 
 const PHASE_PROMPTS: Record<string, string> = {
@@ -64,6 +74,34 @@ export async function runCommand(
   const promptFile = join(gardenerDir, 'prompts', PHASE_PROMPTS[resolvedPhase]);
   const contextFile = join(gardenerDir, 'context.md');
 
+  // Create logger
+  const logger = await createLogger(gardenerDir, { verbose: options.verbose });
+  logger.info('run_start', { phase: resolvedPhase, provider: config.provider, model });
+
+  // Preflight checks — always run in validate mode, skip only with --force (non-validate)
+  if (options.validate || !options.force) {
+    const preflight = await runPreflight(cwd, gardenerDir, config, logger);
+
+    if (preflight.warnings.length > 0) {
+      for (const w of preflight.warnings) {
+        console.log(chalk.yellow(`  [warn] ${w}`));
+      }
+    }
+
+    if (!preflight.ok) {
+      for (const e of preflight.errors) {
+        console.error(chalk.red(`  [error] ${e}`));
+      }
+      process.exit(1);
+    }
+  }
+
+  // Validate-only mode
+  if (options.validate) {
+    console.log(chalk.green('Preflight checks passed.'));
+    process.exit(0);
+  }
+
   console.log(
     chalk.dim(
       `\nvault-gardener run ${resolvedPhase} — ${config.provider}/${model}\n`
@@ -81,13 +119,37 @@ export async function runCommand(
     return;
   }
 
-  // Acquire lock
+  // Force-unlock if requested
+  if (options.forceUnlock) {
+    await forceRelease(gardenerDir, logger);
+  }
+
+  // Acquire lock (or queue)
+  let lockHandle: LockHandle;
   try {
-    await acquireLock(gardenerDir);
+    if (options.noQueue) {
+      lockHandle = await acquireLock(gardenerDir, logger);
+    } else {
+      const queueEntry: QueueEntry = {
+        phase: resolvedPhase,
+        provider: config.provider,
+        tier: config.tier,
+        queuedAt: new Date().toISOString(),
+        reason: 'lock_busy',
+      };
+      const handle = await acquireOrQueue(gardenerDir, queueEntry, logger);
+      if (!handle) {
+        console.log(chalk.yellow('Gardener busy — run queued for next invocation.'));
+        process.exit(0);
+      }
+      lockHandle = handle;
+    }
   } catch (err) {
     console.error(chalk.red(`${(err as Error).message}`));
     process.exit(1);
   }
+
+  lockHandle.startHeartbeat();
 
   const startTime = Date.now();
   let exitCode = 0;
@@ -157,9 +219,36 @@ export async function runCommand(
 
     await writeMetrics(gardenerDir, metrics);
     console.log('\n' + formatSummary(metrics));
+
+    // Write last-run marker
+    const lastRunPath = join(cwd, '.gardener-last-run.md');
+    const lastRunContent = `---\ndate: ${metrics.date}\ntimestamp: ${metrics.timestamp}\nphase: ${resolvedPhase}\nprovider: ${config.provider}\nmodel: ${model}\nduration: ${duration}s\nexitCode: ${exitCode}\n---\n`;
+    await writeFile(lastRunPath, lastRunContent, 'utf-8').catch(() => {});
   } finally {
-    await releaseLock(gardenerDir);
+    lockHandle.stopHeartbeat();
+    await lockHandle.release();
   }
+
+  // Notify on failure (exclude vault_path to avoid leaking local paths)
+  if (exitCode !== 0) {
+    const duration = Math.round((Date.now() - startTime) / 1000);
+    await notifyFailure(
+      {
+        phase: resolvedPhase,
+        duration_seconds: duration,
+        exit_code: exitCode,
+        reason: `Provider exited with code ${exitCode}`,
+        timestamp: new Date().toISOString(),
+      },
+      logger,
+    );
+    logger.error('run_failed', { phase: resolvedPhase, exitCode });
+  } else {
+    logger.info('run_complete', { phase: resolvedPhase });
+  }
+
+  // Queue entries are left for the next cron tick or manual run to pick up.
+  // Consuming them here without actually re-executing would silently discard work.
 
   if (exitCode !== 0) process.exit(1);
 }
