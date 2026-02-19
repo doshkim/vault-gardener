@@ -1,0 +1,143 @@
+# Nurture — Structure & Knowledge Building
+
+Repair structure, consolidate episodic memories into semantic knowledge, and build
+the knowledge graph. Structural integrity first, then belief updates, playbook
+extraction, MOC generation, and semantic linking.
+
+**No information is ever deleted** — only reorganized, enriched, and connected.
+
+## Safety
+
+- **Never delete** — only reorganize, enrich, connect
+- **Skip recently modified** — if file modified in last 5 min, skip it
+- **Never touch protected paths**: {{#each protected}}`{{this}}/` {{/each}}
+
+## Instructions
+
+Read `.gardener/context.md` for vault structure and rules.
+
+---
+
+## Step 1 — Structural Integrity Checks
+
+- **Root orphans**: Find `.md` files in vault root (not in any folder). Move to `{{folders.inbox}}/` for triage.
+- **Depth check**: Flag folders nested deeper than 3 levels.
+- **Duplicate detection**: Find notes with identical titles in different folders. Log for review.
+- **Broken WikiLinks**: Scan for `[[links]]` pointing to non-existent notes. Auto-fix close matches (case-insensitive). Log rest.
+- **Empty notes**: Find notes with only frontmatter and no body content, older than 7 days. Flag for review.
+
+## Step 1.1 — Frontmatter Compliance Sweep
+
+Scan notes modified in the last 14 days. Verify required frontmatter:
+
+- **All notes**: {{#each frontmatter.required}}`{{this}}`{{#unless @last}}, {{/unless}}{{/each}}
+{{#if folders.projects}}- **Projects**: `deadline`, `outcome`, `priority`, `role`{{/if}}
+{{#if folders.roles}}- **Roles**: `role`, `cadence`{{/if}}
+{{#if folders.people}}- **People**: `relationship`, `company`, `last-contact`{{/if}}
+{{#if folders.orgs}}- **Orgs**: `org-type`, `industry`, `website`, `relationship`{{/if}}
+{{#if folders.resources}}- **Resources**: `source`, `author`, `rating`, `topic`{{/if}}
+
+Fill missing fields with sensible defaults:
+- `created`/`updated` → file dates
+- `status` → `seed` if new
+- `type` → infer from folder location
+- `tags` → infer 1-3 from title/content
+
+## Step 1.2 — Orphan Triage
+
+Identify notes with no incoming links (orphans).
+
+- `status: seed` + >14 days + 0 incoming links → add review comment, try to auto-link
+- `status: growing` + orphan → add to "Needs Attention" list
+- `status: evergreen` + orphan → attempt auto-link
+
+**Never auto-archive orphans.**
+
+---
+
+## Step 2 — Consolidator
+
+Scan all journals with `## Store` sections.
+
+### Process checked items (`- [x] Update [[Target]] with {content}`)
+
+1. Open target note
+2. Find or create `## Beliefs (with receipts)` section
+3. Count supporting journals:
+   - 2+ journals → `✅ confirmed`
+   - 1 journal → `🟡 emerging`
+   - Explicitly hypothesis → `🧪 hypothesis`
+4. Append bullet: `- {marker} {belief} — evidence: [[Journal 1]], [[Journal 2]]`
+5. **Contradiction check:** If conflicting belief found, mark both `🟡 emerging` and add warning callout
+6. Mark Store checkbox as consolidated
+
+**Never delete beliefs.** Mark `⛔ retracted` when outdated.
+
+**Batch limit:** Max {{limits.beliefs_per_run}} belief updates per run.
+
+## Step 2.1 — Playbook Builder
+
+Detect procedural patterns across journals.
+
+**Triggers:**
+- 3+ journals share 2+ tags AND contain step-lists
+- OR note tagged `#playbook-candidate`
+
+**Actions:**
+- Create/update `{{folders.playbooks}}/{topic-slug}.md`
+- Sections: `## Trigger`, `## Steps`, `## Failure Modes`, `## Evidence`
+
+**Batch limit:** Max {{limits.playbooks_per_run}} playbooks per run.
+
+## Step 2.2 — Auto-MOC
+
+Generate Maps of Content for frequently-mentioned entities.
+
+**Threshold (adaptive):**
+| Vault Notes | Base | Salient Override |
+|-------------|------|------------------|
+| < 100 | 5 | 3 |
+| 100-500 | 8 | 5 |
+| 500+ | 12 | 7 |
+
+**Actions:**
+- Create `{{folders.mocs}}/MOC - {Entity}.md`
+- Sections: `## Timeline`, `## Key Beliefs`, `## Related`, `## Open Questions`
+
+**Batch limit:** Max {{limits.mocs_per_run}} new MOCs per run.
+
+---
+
+## Step 3 — Semantic Similarity Linking
+
+Analyze notes modified in the last 14 days. Find related notes using:
+- **Tag overlap**: 2+ topic-specific tags shared (exclude structural tags)
+- **Title word overlap**: Significant shared words
+- **Topic match**: Same `topic` frontmatter
+- **Content keywords**: Top 5 keywords, find notes mentioning them
+
+For each candidate pair with no existing link:
+- Add bidirectional WikiLinks in `## See Also` section
+
+**Limit:** Max {{limits.links_per_run}} new links per run.
+
+---
+
+## Commit (if git available)
+
+```bash
+git add -A && git commit -m "vault-gardener nurture: {date} ({beliefs} beliefs, {links} links)"
+```
+
+---
+
+## Output
+
+Summary:
+- **Structure**: {root} orphans moved, {dupes} duplicates found, {broken} links fixed
+- **Frontmatter**: {notes} notes fixed, {fields} fields added
+- **Orphans**: {linked} auto-linked, {flagged} flagged
+- **Beliefs**: {consolidated} beliefs consolidated, {contradictions} contradictions
+- **Playbooks**: {created} created, {updated} updated
+- **MOCs**: {created} new MOCs, {updated} refreshed
+- **Links**: {count} new links, {cross} cross-domain connections

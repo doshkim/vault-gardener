@@ -1,0 +1,43 @@
+# Gardener — AI-Powered Vault Maintenance Pipeline
+
+Run the full vault gardener. Three phases execute in sequence:
+1. **Seed** — process inbox into journals and semantic folders
+2. **Nurture** — repair structure, consolidate knowledge, build links
+3. **Tend** — lifecycle management, organization, enrichment
+
+**No information is ever deleted** — only reorganized, enriched, and connected.
+
+## Protected Paths
+
+**NEVER read, modify, or process files in these locations:**
+{{#each protected}}
+- `{{this}}/`
+{{/each}}
+
+## Concurrency Safety
+
+Before modifying any file, check its modification time. If the file was
+modified in the last 5 minutes, SKIP it — the user may be actively editing.
+Log skipped files with reason "skipped: recently modified".
+
+## Instructions
+
+First, read `.gardener/context.md` to understand vault structure and rules.
+
+Then execute the pipeline:
+
+### Phase 1: Seed
+Read `.gardener/prompts/seed.md` and execute all steps.
+
+### Phase 2: Nurture
+Read `.gardener/prompts/nurture.md` and execute all steps.
+
+### Phase 3: Tend
+Read `.gardener/prompts/tend.md` and execute all steps.
+
+## Output
+
+Combined summary from all three phases:
+- **Seed**: Inbox items triaged, journals created, salience tags applied, items routed
+- **Nurture**: Structure repaired, beliefs consolidated, playbooks/MOCs generated, links added
+- **Tend**: Stale notes reviewed, resources organized, notes enriched

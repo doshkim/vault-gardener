@@ -1,0 +1,62 @@
+{
+  "name": "vault-gardener",
+  "version": "0.1.0",
+  "description": "AI-powered vault maintenance pipeline for markdown knowledge bases. Seed → Nurture → Tend.",
+  "type": "module",
+  "bin": {
+    "vault-gardener": "./dist/bin/vault-gardener.js"
+  },
+  "main": "./dist/src/index.js",
+  "types": "./dist/src/index.d.ts",
+  "files": [
+    "dist",
+    "presets",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "lint": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "obsidian",
+    "markdown",
+    "vault",
+    "knowledge-base",
+    "gardener",
+    "ai",
+    "logseq",
+    "foam",
+    "dendron",
+    "pkm"
+  ],
+  "author": "doshkim",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/doshkim/vault-gardener.git"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "chalk": "^5.4.1",
+    "commander": "^13.1.0",
+    "handlebars": "^4.7.8",
+    "ink": "^5.1.0",
+    "ink-table": "^3.1.0",
+    "node-cron": "^3.0.3",
+    "ora": "^8.1.1",
+    "react": "^18.3.1",
+    "yaml": "^2.7.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.4",
+    "@types/node-cron": "^3.0.11",
+    "@types/react": "^18.3.18",
+    "tsup": "^8.3.6",
+    "typescript": "^5.7.3"
+  }
+}

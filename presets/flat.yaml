@@ -1,0 +1,28 @@
+name: flat
+
+folders:
+  inbox: "inbox"
+  archive: "archive"
+
+topics:
+  ideas:
+    - idea
+    - thought
+    - brainstorm
+  reference:
+    - note
+    - snippet
+    - bookmark
+
+frontmatter:
+  required:
+    - created
+    - tags
+  statuses:
+    - draft
+    - done
+    - archived
+  types:
+    - note
+    - idea
+    - reference

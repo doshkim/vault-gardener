@@ -1,0 +1,173 @@
+# Seed — Intake & Routing
+
+Process inbox items into journals and semantic folders. Raw captures become
+structured episodic and semantic memories.
+
+**No information is ever deleted** — only reorganized, enriched, and connected.
+
+## Safety
+
+- **Never delete** — only reorganize, enrich, connect
+- **Skip recently modified** — if file modified in last 5 min, skip it
+- **Never touch protected paths**: {{#each protected}}`{{this}}/` {{/each}}
+
+## Instructions
+
+Read `.gardener/context.md` for vault structure and routing rules.
+
+---
+
+## Step 0 — Document Cleanup
+
+Run cleanup on recently modified notes before other maintenance:
+
+1. **Find recent notes**: Identify all notes modified in the last 7 days
+   (skip protected paths)
+
+2. **Skip already clean**: Exclude notes with `status: evergreen`
+
+3. **Run cleanup phases** for each note:
+   - **Format**: Normalize whitespace, bullets, headings, dates
+   - **Structure**: Add missing sections for document type
+   - **Enrich**: Fill thin content (<100 words) with context
+   - **Cross-link**: Discover and add WikiLinks to related notes
+
+4. **Processing rules**:
+   - Skip protected paths
+   - Never reduce content, only add or restructure
+   - Preserve code blocks, WikiLinks, and embeds exactly
+
+---
+
+## Step 1 — Triage
+
+Classify each `{{folders.inbox}}/` item:
+
+**EPISODIC signals** (any match → episodic):
+- First-person pronouns: "I", "my", "we", "our"
+- Temporal markers: "today", "yesterday", "just now", "this morning"
+- Frontmatter: `type: meeting`, `type: journal`
+- Contains `[decision]`, `[milestone]`, `[insight]`, `[met]` tags
+- Voice memo transcription
+
+**ENTITY/REFERENCE signals** (any match → direct route):
+- Frontmatter: `type: resource`, `person`, `org`
+- Contains URL as primary content
+- Filename matches person/org naming patterns
+- Is a clipped article (`type: clip`, `source: url`)
+
+**AMBIGUOUS** → default episodic
+
+- Episodic items → **Step 1.1 (Binder)**
+- Entity/reference items → **Step 1.3 (Route Remaining)**
+
+## Step 1.1 — Binder
+
+Process episodic inbox items into journals.
+
+**Content maturity check:**
+- Structured (headings, links, checklists, or >50 words) → process now
+- Bare capture (<50 words, no structure) → skip if < 12h old
+- Has explicit routing tag → process immediately
+
+### SMALL captures (< 50 words, single thought)
+
+1. Find or create `{{folders.journal}}/YYYY/{{journal.journal_subfolders.daily}}/YYYY-MM-DD.md`
+2. Append under `## Captures`:
+   ```
+   - {content} — [[source-if-any]] ({HH:MM})
+   ```
+3. Delete inbox file
+
+### LARGE captures (>= 50 words, OR has headings, OR contains [decision]/[milestone]/[insight])
+
+1. **Determine Kind** from content:
+   | Signal | Kind |
+   |--------|------|
+   | "decided", "chose", "going with" | Decision |
+   | "realized", "learned", "turns out" | Insight |
+   | "shipped", "launched", "completed" | Milestone |
+   | "failed", "broke", "mistake" | Failure |
+   | "met", "talked", "called" | Encounter |
+   | "won", "closed", "landed" | Win |
+   | Default | Observation |
+
+2. **Create event journal**: `{{folders.journal}}/YYYY/{{journal.journal_subfolders.daily}}/YYYY-MM-DD {Kind} - {Title}.md`
+3. **Apply frontmatter**:
+   ```yaml
+   ---
+   created: YYYY-MM-DD
+   updated: YYYY-MM-DD
+   tags: [journal, {kind-lowercase}]
+   status: seed
+   type: journal
+   kind: {Kind}
+   ---
+   ```
+   Sections: `## Context`, `## Takeaways`, `## Store`
+
+4. **Link from daily note** under `## Events`
+5. Delete inbox file
+
+## Step 1.2 — Salience Tagger
+
+Scan journals modified in last 24h.
+
+**HIGH salience** → add `#salient`:
+- Explicit tags: `#salient`, `#urgent`, `#painful`, `#win`
+- Risk language: "risk", "threat", "red flag", "critical"
+- Emotional markers: "surprised", "shocked", "changed my mind"
+- High stakes: "$", "million", "funding", "fired", "hired"
+
+**MEDIUM salience** → add `#notable`:
+- "interesting", "worth noting", "keep in mind", "opportunity"
+
+**Idempotent:** skip if already tagged.
+
+## Step 1.3 — Route Remaining Inbox
+
+Route entity/reference items to folders:
+
+{{#if folders.people}}- **People** → `{{folders.people}}/`{{/if}}
+{{#if folders.orgs}}- **Orgs** → `{{folders.orgs}}/`{{/if}}
+{{#if folders.projects}}- **Projects** → `{{folders.projects}}/`{{/if}}
+{{#if folders.sources}}- **Sources** (articles, books, clips) → `{{folders.sources}}/`{{/if}}
+{{#if folders.resources}}- **Concepts/Knowledge** → `{{folders.resources}}/{topic-subfolder}/`{{/if}}
+{{#if folders.playbooks}}- **Playbooks** (how-tos, processes) → `{{folders.playbooks}}/`{{/if}}
+
+For each routed item:
+- Enrich with proper frontmatter
+- Add relevant links to existing notes
+- Move to destination
+
+## Step 1.4 — People Auto-Research
+
+Detect sparse people notes and enrich:
+
+1. Find sparse people notes in `{{folders.people}}/`:
+   - File size < 500 bytes, `status: seed`, NOT `auto-researched: true`
+   - NOT modified within last 7 days
+2. Batch limit: 3-5 notes per run
+3. Web search for job title, company, brief bio
+4. Update with attribution banner
+5. Safety: only fill empty sections, never overwrite
+
+---
+
+## Commit (if git available)
+
+```bash
+git add -A && git commit -m "vault-gardener seed: {date} ({count} items processed)"
+```
+
+---
+
+## Output
+
+Summary:
+- **Cleanup**: {files} files cleaned
+- **Triage**: {episodic} episodic, {entity} entity items classified
+- **Journals**: {daily} daily captures, {event} event journals created
+- **Salience**: {high} high, {medium} medium tags applied
+- **Routing**: {routed} items routed to folders
+- **People**: {researched} people notes auto-researched

@@ -1,0 +1,118 @@
+# Tend — Lifecycle & Enrichment
+
+Review note lifecycle, organize semantic memory into topic folders, and progressively
+enrich sparse notes. Pruning, organizing, and nurturing the knowledge garden.
+
+**No information is ever deleted** — only reorganized, enriched, and connected.
+
+## Safety
+
+- **Never delete** — only reorganize, enrich, connect
+- **Skip recently modified** — if file modified in last 5 min, skip it
+- **Never touch protected paths**: {{#each protected}}`{{this}}/` {{/each}}
+
+## Instructions
+
+Read `.gardener/context.md` for vault structure and rules.
+
+---
+
+## Step 1 — Stale Note Review
+
+Non-destructive review. **Never auto-archive or delete.**
+
+| Condition | Action |
+|-----------|--------|
+| `seed` + 0 incoming links + >14 days old | Add review comment. Find 2-3 related notes and add WikiLinks. |
+| `seed` + >30 days old | Flag in summary: "Needs attention — develop or connect." |
+| Event journal with all Store items processed | Set `status: consolidated`. |
+
+## Step 1.1 — Semantic Memory Organizer
+
+Auto-organize `{{folders.resources}}/` into topic subfolders.
+
+1. **Scan loose files** in `{{folders.resources}}/` root
+2. **Detect topic** from title, tags, content, `topic` frontmatter
+3. **Route to matching subfolder:**
+   - Subfolder exists → move file, update `topic` frontmatter
+   - No subfolder but {{auto_grow.resources}}+ loose files share topic → create subfolder + index note
+   - Topic unclear or < {{auto_grow.resources}} matches → leave in root
+4. **Update index notes** with file links
+5. **Never move files OUT of existing subfolders**
+
+**Topic taxonomy:**
+{{#each topics}}
+- **{{@key}}**: {{#each this}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}
+{{/each}}
+
+New topic categories auto-created when {{auto_grow.resources}}+ notes share keywords not covered above.
+
+**Batch limit:** Max {{limits.organize_per_run}} files organized per run.
+
+---
+
+## Step 2 — Journal Generation
+
+Generate higher-level journal summaries when threshold data exists.
+
+### Weekly Summary
+- **Trigger**: 3+ daily entries exist for the week
+- **Location**: `{{folders.journal}}/YYYY/{{journal.journal_subfolders.weekly}}/YYYY-WNN.md`
+- **Style**: {{journal.style.weekly}}
+- **Sections**: Highlights, Decisions, Learnings, People, Open Items for Next Week
+- **Links**: Back-links to each daily + event journal
+
+### Monthly Summary
+- **Trigger**: 2+ weekly entries exist for the month
+- **Location**: `{{folders.journal}}/YYYY/{{journal.journal_subfolders.monthly}}/YYYY-MM.md`
+- **Style**: {{journal.style.monthly}}
+- **Sections**: Highlights, Goal Progress, Key Relationships, Knowledge Growth, Gardener Recommendations
+
+### Quarterly Reflection
+- **Trigger**: 2+ monthly entries exist for the quarter
+- **Location**: `{{folders.journal}}/YYYY/{{journal.journal_subfolders.quarterly}}/YYYY-QN.md`
+- **Style**: {{journal.style.quarterly}}
+- **Sections**: Quarter in Review, Progress Against Themes, Goal Assessment, Key Learnings, Top Relationships, Gardener Recommendations
+
+### Yearly Review
+- **Trigger**: User sets themes in yearly note
+- **Location**: `{{folders.journal}}/YYYY/{{journal.journal_subfolders.yearly}}/YYYY.md`
+- **Style**: {{journal.style.yearly}}
+- **Sections**: Themes, Goals & Plans, Progress Tracker, Key Events, Key Learnings, Gardener Recommendations
+- **Lifecycle**: Created on Jan 1st (or init). Updated monthly. Comprehensive Q4 review.
+
+---
+
+## Step 3 — Progressive Enrichment Queue
+
+Process sparse notes for enrichment:
+
+1. Scan vault for candidates:
+   - Notes with `status: seed` and content < 200 words
+   - Notes with 0 outgoing WikiLinks
+   - Resource notes missing `## Key Takeaways`
+2. **Priority**: Notes referenced by more journals get enriched first
+3. Process top {{limits.enrich_per_run}} items:
+   - Extract key concepts and create/link resource notes
+   - Add 3-5 WikiLinks to related notes
+   - Expand thin sections
+   - Promote `seed` → `growing` if substantially enriched
+4. Report: "Enriched {count} notes, {remaining} remaining in queue"
+
+---
+
+## Commit (if git available)
+
+```bash
+git add -A && git commit -m "vault-gardener tend: {date} ({enriched} enriched, {organized} organized)"
+```
+
+---
+
+## Output
+
+Summary:
+- **Stale review**: {flagged} notes flagged, {consolidated} journals consolidated
+- **Organization**: {organized} files organized into topic subfolders
+- **Journals**: {weekly} weekly, {monthly} monthly, {quarterly} quarterly generated
+- **Enrichment**: {enriched} notes enriched, {remaining} remaining in queue
