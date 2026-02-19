@@ -112,6 +112,7 @@ vault-gardener run tend                # Run only lifecycle/enrichment
 vault-gardener start                   # Start background daemon
 vault-gardener stop                    # Stop daemon
 vault-gardener status                  # View dashboard
+vault-gardener recover                 # Diagnose and fix stale state
 vault-gardener config get <key>        # Read config value
 vault-gardener config set <key> <val>  # Write config value
 vault-gardener config regen            # Regenerate prompts from config
@@ -124,6 +125,10 @@ vault-gardener config regen            # Regenerate prompts from config
 --tier <power|fast>  # Override tier
 --dry-run            # Show what would execute
 --verbose            # Stream LLM output
+--force-unlock       # Force-release stale lock before running
+--no-queue           # Fail immediately if locked (don't queue)
+--force              # Skip preflight checks
+--validate           # Run preflight checks only, then exit
 ```
 
 ## Configuration
@@ -220,6 +225,27 @@ protected:
   - .git
   - node_modules
   - templates
+```
+
+### Resilience
+
+Tune operational behavior:
+
+```yaml
+resilience:
+  queue_enabled: true
+  queue_max_size: 10
+  queue_max_age_hours: 24
+  metrics_timeout_seconds: 30
+  metrics_max_files: 50000
+  lock_heartbeat_interval_seconds: 30
+  lock_stale_threshold_seconds: 300
+  provider_kill_grace_seconds: 10
+  log_max_size_mb: 10
+  log_max_backups: 3
+  daemon_max_consecutive_failures: 5
+  vault_quiet_seconds: 30
+  preflight_enabled: true
 ```
 
 ## Journal System
@@ -373,11 +399,46 @@ Shows:
 
 Use `--json` for machine-readable output.
 
+## Preflight Checks
+
+Before each run, vault-gardener checks:
+
+- Vault directory is accessible (5s timeout)
+- No recent edits in inbox (configurable quiet period)
+- No sync conflicts (iCloud, Syncthing, etc.)
+- Git state is clean (no merge conflicts)
+- Sufficient disk space (100MB minimum)
+- Provider CLI is installed
+- Prompt files exist
+
+Skip with `--force`. Run checks only with `--validate`.
+
+## Recovery
+
+If a run crashes or leaves stale state:
+
+```bash
+vault-gardener recover
+```
+
+Fixes: stale lock files, orphan heartbeats, stale queue entries, corrupted metrics files. Reports: active locks, staged git changes.
+
+## Failure Notifications
+
+Set a webhook URL to receive failure alerts:
+
+```bash
+export GARDENER_WEBHOOK_URL=https://hooks.slack.com/services/...
+```
+
+On failure, POSTs JSON with phase, duration, exit code, reason, and timestamp.
+
 ## What `.gardener/` Contains
 
 ```
 .gardener/
 ├── config.yaml          # Main config (user-editable)
+├── config.yaml.bak      # Auto-backup of last good config
 ├── context.md           # Auto-generated vault context for LLM
 ├── prompts/
 │   ├── garden.md        # Orchestrator prompt
@@ -387,8 +448,12 @@ Use `--json` for machine-readable output.
 ├── metrics/
 │   └── YYYY-MM-DD.json  # Run metrics
 ├── logs/
-│   └── gardener.log     # Run log
-└── .lock                # PID lock (runtime only)
+│   ├── gardener.log     # Structured JSON log
+│   └── last-run-output.txt  # Last provider output (10KB cap)
+├── queue.json           # Pending queued runs
+├── .lock                # PID lock (runtime only)
+├── .lock-heartbeat      # Lock liveness heartbeat
+└── .daemon-health       # Daemon health status
 ```
 
 ## FAQ
