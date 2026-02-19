@@ -1,25 +1,37 @@
-# vault-gardener
+# 🌱 vault-gardener
 
-AI-powered vault maintenance pipeline for markdown knowledge bases. Works with Obsidian, Logseq, Foam, Dendron, or any folder of `.md` files.
+<p align="center"><strong>Your vault is a garden. Stop weeding it by hand.</strong></p>
 
-Three phases keep your vault organized:
+<p align="center">
+  <a href="https://github.com/doshkim/vault-gardener/releases"><img src="https://img.shields.io/github/v/release/doshkim/vault-gardener?style=for-the-badge" alt="GitHub release"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge" alt="MIT License"></a>
+</p>
 
-**Seed** — intake and routing (inbox → journals + semantic folders)
-**Nurture** — structure repair, knowledge consolidation, link building
-**Tend** — lifecycle management, organization, enrichment
+**vault-gardener** is an AI-powered maintenance pipeline for your markdown knowledge base. Point it at your vault, pick a provider (Claude, Codex, or Gemini), and let it do the grunt work — triaging your inbox, fixing broken links, building Maps of Content, writing journal summaries, and connecting ideas you forgot were related.
 
-## Quick Start
+It works with Obsidian, Logseq, Foam, Dendron, or literally any folder of `.md` files. No plugins, no lock-in.
+
+Three phases, inspired by actual gardening:
+
+- 🌱 **Seed** — intake and routing. Inbox items get triaged, classified, and planted in the right soil.
+- 🪴 **Nurture** — structure repair, knowledge consolidation, link building. Fix the orphans. Connect the dots.
+- ✂️ **Tend** — lifecycle management, enrichment, journal generation. Promote what's growing. Prune what's stale.
+
+The gardener **never deletes your notes**. Ever. It only reorganizes, enriches, and connects.
+
+## Quick start
 
 ```bash
-# In your vault directory
-npx vault-gardener init     # Detect structure, pick provider, generate config
-vault-gardener run           # Run full pipeline
-vault-gardener status        # View run history and vault health
+npx vault-gardener init      # detect structure, pick provider, generate config
+vault-gardener run            # run full pipeline (seed → nurture → tend)
+vault-gardener status         # see what happened
 ```
 
-## How It Works
+That's it. Three commands. Your inbox is clear and your vault has structure.
 
-vault-gardener delegates to an AI coding agent (Claude, Codex, or Gemini CLI) which reads your vault, understands its structure, and performs maintenance tasks.
+## How it works
+
+vault-gardener delegates to an AI coding agent that reads your vault, understands its structure, and performs the maintenance you keep putting off. It's a pipeline, not a chatbot — fire and forget.
 
 ```
                         ┌─────────────────────────────────────────────┐
@@ -28,7 +40,7 @@ vault-gardener delegates to an AI coding agent (Claude, Codex, or Gemini CLI) wh
                         └─────────────────────────────────────────────┘
 
   ┌──────────────────────────────────────────────────────────────────────────────┐
-  │  SEED (Intake & Routing)                                                     │
+  │  🌱 SEED (Intake & Routing)                                                 │
   │                                                                              │
   │  ┌─────────┐    ┌──────────┐    ┌──────────────────┐    ┌───────────────┐   │
   │  │  Inbox   │───▶│  Triage  │───▶│  Episodic?       │─Y─▶│  Binder       │   │
@@ -47,7 +59,7 @@ vault-gardener delegates to an AI coding agent (Claude, Codex, or Gemini CLI) wh
                                          │
                                          ▼
   ┌──────────────────────────────────────────────────────────────────────────────┐
-  │  NURTURE (Structure & Knowledge Building)                                    │
+  │  🪴 NURTURE (Structure & Knowledge Building)                                │
   │                                                                              │
   │  Structural Integrity    Consolidator           Playbook Builder             │
   │  • fix orphans           • journals → beliefs   • 3+ journals share          │
@@ -61,7 +73,7 @@ vault-gardener delegates to an AI coding agent (Claude, Codex, or Gemini CLI) wh
                                          │
                                          ▼
   ┌──────────────────────────────────────────────────────────────────────────────┐
-  │  TEND (Lifecycle & Enrichment)                                               │
+  │  ✂️  TEND (Lifecycle & Enrichment)                                           │
   │                                                                              │
   │  Stale Review            Auto-Organize           Enrichment Queue            │
   │  • seed > 14d            • resources → topics    • sparse notes              │
@@ -76,68 +88,61 @@ vault-gardener delegates to an AI coding agent (Claude, Codex, or Gemini CLI) wh
 
 ## Requirements
 
-One of these AI CLI tools must be installed:
+You need one AI CLI tool installed. Pick your favorite:
 
-| Provider | CLI | Install |
-|----------|-----|---------|
-| Claude | `claude` | [Claude Code](https://docs.anthropic.com/en/docs/claude-code) |
-| OpenAI | `codex` | [Codex CLI](https://github.com/openai/codex) |
-| Gemini | `gemini` | [Gemini CLI](https://github.com/google-gemini/gemini-cli) |
-
-## Model Tiers
+| Provider | CLI | Install | Opinion |
+|----------|-----|---------|---------|
+| Claude | `claude` | [Claude Code](https://docs.anthropic.com/en/docs/claude-code) | **Recommended.** Best at understanding vault context. |
+| OpenAI | `codex` | [Codex CLI](https://github.com/openai/codex) | Solid. Fast. |
+| Gemini | `gemini` | [Gemini CLI](https://github.com/google-gemini/gemini-cli) | Good for large vaults (long context). |
 
 Each provider has two tiers:
 
-| Provider | Power (thorough) | Fast (quick, cheaper) |
+| Provider | ⚡ Power (thorough) | 🏎️ Fast (quick, cheaper) |
 |----------|------------------|-----------------------|
 | Claude | `opus` | `sonnet` |
 | OpenAI | `gpt-5.3-codex` | `gpt-5.3-codex-spark` |
 | Gemini | `gemini-3-pro-preview` | `gemini-3-flash-preview` |
 
-Set in config:
-
-```yaml
-provider: claude
-tier: fast       # power | fast
-```
+Start with `fast`. Switch to `power` for deep nurture/tend runs. You'll feel the difference.
 
 ## Commands
 
 ```bash
-vault-gardener init                    # Interactive setup
+vault-gardener init                    # Interactive setup wizard
 vault-gardener run [phase]             # Run pipeline (seed|nurture|tend|all)
-vault-gardener run seed                # Run only intake/routing
-vault-gardener run nurture             # Run only structure/consolidation
-vault-gardener run tend                # Run only lifecycle/enrichment
+vault-gardener run seed                # Just intake/routing
+vault-gardener run nurture             # Just structure/consolidation
+vault-gardener run tend                # Just lifecycle/enrichment
 vault-gardener start                   # Start background daemon
 vault-gardener stop                    # Stop daemon
-vault-gardener status                  # View dashboard
-vault-gardener recover                 # Diagnose and fix stale state
+vault-gardener status                  # Dashboard — what happened, vault health
+vault-gardener recover                 # Fix stale locks, broken state, corrupted files
 vault-gardener config get <key>        # Read config value
 vault-gardener config set <key> <val>  # Write config value
 vault-gardener config regen            # Regenerate prompts from config
 ```
 
-### Run Flags
+### Run flags
 
 ```bash
---provider <name>    # Override provider (claude, codex, gemini)
+--provider <name>    # Override provider for this run
 --tier <power|fast>  # Override tier
---dry-run            # Show what would execute
---verbose            # Stream LLM output
---force-unlock       # Force-release stale lock before running
+--dry-run            # Show what would execute, touch nothing
+--verbose            # Stream raw LLM output to terminal
+--force-unlock       # Nuke a stale lock before running
 --no-queue           # Fail immediately if locked (don't queue)
---force              # Skip preflight checks
---validate           # Run preflight checks only, then exit
+--force              # Skip preflight checks (you're feeling lucky)
+--validate           # Run preflight only, then exit
 ```
 
 ## Configuration
 
-After `vault-gardener init`, config lives at `.gardener/config.yaml`.
+After `vault-gardener init`, your config lives at `.gardener/config.yaml`. It's YAML, it's human-readable, it's version-controllable. Edit it directly or use `config set`.
 
-### Folder Mappings
+### 📁 Folder mappings
 
-Map your vault folders to semantic roles:
+Tell the gardener where things live:
 
 ```yaml
 folders:
@@ -155,9 +160,9 @@ folders:
   templates: templates
 ```
 
-### Topic Taxonomy
+### 🏷️ Topic taxonomy
 
-Define keyword clusters for auto-organizing resources:
+Define keyword clusters. The gardener uses these to auto-organize resources:
 
 ```yaml
 topics:
@@ -168,11 +173,11 @@ topics:
   travel: [travel, trips, destinations, itinerary, places]
 ```
 
-New topics are auto-created when 3+ notes cluster around keywords not in the taxonomy.
+When 3+ notes cluster around keywords not in the taxonomy, a new topic is born.
 
-### Auto-Grow Thresholds
+### 📐 Auto-grow thresholds
 
-Control when the gardener creates subfolders:
+When a folder type accumulates enough notes about the same thing, the gardener creates subfolders:
 
 ```yaml
 auto_grow:
@@ -185,11 +190,11 @@ auto_grow:
   sources: 5
 ```
 
-Set to `0` to disable auto-grow for a folder type.
+Set to `0` to disable. The gardener won't get creative if you don't want it to.
 
-### Batch Limits
+### 🚦 Batch limits
 
-Safety limits per run:
+Safety valves. The gardener won't go wild in a single run:
 
 ```yaml
 limits:
@@ -201,7 +206,7 @@ limits:
   enrich_per_run: 5
 ```
 
-### Frontmatter Standards
+### 📝 Frontmatter standards
 
 ```yaml
 frontmatter:
@@ -210,49 +215,41 @@ frontmatter:
   types: [journal, project, role, resource, person, org, meeting, idea, playbook, moc]
 ```
 
-### Protected Paths
+### 🛡️ Protected paths
 
-Never touched by the gardener:
+These directories are sacred. The gardener will never touch them:
 
 ```yaml
 protected:
   - .gardener
   - .obsidian
-  - .logseq
-  - .foam
-  - .dendron
-  - .vscode
   - .git
   - node_modules
   - templates
 ```
 
-### Resilience
+### ⚙️ Resilience
 
-Tune operational behavior:
+For the operators. Tune timeouts, queue behavior, and failure thresholds:
 
 ```yaml
 resilience:
-  queue_enabled: true
-  queue_max_size: 10
-  queue_max_age_hours: 24
-  metrics_timeout_seconds: 30
-  metrics_max_files: 50000
-  lock_heartbeat_interval_seconds: 30
+  queue_max_size: 10               # max queued runs
+  queue_max_age_hours: 24          # auto-expire stale queue entries
+  metrics_timeout_seconds: 30      # give up counting links after 30s
+  metrics_max_files: 50000         # cap vault walk at 50k files
   lock_stale_threshold_seconds: 300
-  provider_kill_grace_seconds: 10
+  provider_kill_grace_seconds: 10  # SIGTERM → SIGKILL grace period
   log_max_size_mb: 10
   log_max_backups: 3
   daemon_max_consecutive_failures: 5
-  vault_quiet_seconds: 30
+  vault_quiet_seconds: 30          # wait for edits to settle
   preflight_enabled: true
 ```
 
-## Journal System
+## 📓 Journal system
 
-The gardener auto-generates higher-level journal summaries from daily notes.
-
-### Hierarchy
+The gardener auto-generates higher-level journal summaries from your daily notes. Write daily, get weekly/monthly/quarterly/yearly for free.
 
 ```
 {journal}/
@@ -266,118 +263,92 @@ The gardener auto-generates higher-level journal summaries from daily notes.
         └── YYYY-MM-DD Kind - Title.md
 ```
 
-### Generation Triggers
-
-| Level | Trigger | Content |
-|-------|---------|---------|
+| Level | Triggers when | What you get |
+|-------|---------------|-------------|
 | Weekly | 3+ daily entries | Highlights, Decisions, Learnings, People, Open Items |
-| Monthly | 2+ weekly entries | Highlights, Goal Progress, Key Relationships, Gardener Recommendations |
-| Quarterly | 2+ monthly entries | Quarter Review, Progress vs Themes, Goal Assessment, Recommendations |
-| Yearly | User sets themes | Themes, Goals, Progress Tracker, Key Events, Learnings |
+| Monthly | 2+ weeklies | Goal Progress, Key Relationships, Gardener Recommendations |
+| Quarterly | 2+ monthlies | Quarter Review, Progress vs Themes, Goal Assessment |
+| Yearly | You set themes | Themes, Goals, Progress Tracker, Key Events |
 
-### Journal Styles
+Two styles — pick per cadence:
 
-Each cadence can use `structured` (default) or `narrative` style:
-
-```yaml
-journal:
-  style:
-    weekly: structured
-    monthly: structured
-    quarterly: narrative
-    yearly: structured
-```
-
-**Structured** — section headers with bullet points, scannable:
+**Structured** (default) — scannable bullet points:
 
 ```markdown
 ## Highlights
 - Closed Series A term sheet with [[Sequoia]]
 - Shipped v2.1 with new graph view
 
-## Decisions
-- [[2026-02-17 Decision - API Consolidation|Consolidated API layer]]
-
 ## Gardener Recommendations
 - Theme "Build in public" has low evidence — consider scheduling content days
 ```
 
-**Narrative** — third-person prose, reads like a memo:
+**Narrative** — reads like a memo your future self will thank you for:
 
 ```markdown
 This week saw significant progress on the AI Butler project. Monday's sync
 reshaped the Q2 roadmap, culminating in a key decision to consolidate the
-API layer. The Series A conversations with Sequoia advanced to term sheet
-stage — a major milestone.
-
-## Gardener Recommendations
-The "Build in public" theme has limited evidence this week. Consider
-scheduling dedicated content creation days.
+API layer.
 ```
 
-## Note Lifecycle
+## 🌿 Note lifecycle
+
+Every note has a lifecycle. The gardener respects it:
 
 ```
 seed → growing → evergreen → archived       (all notes)
 seed → consolidated                          (event journals only)
 ```
 
-| Status | Gardener Behavior |
-|--------|-------------------|
-| **seed** | Maximum attention. Enriches, fills frontmatter, adds links, organizes. |
-| **growing** | Active management. Adds links, updates beliefs, tracks goals. |
-| **evergreen** | Passive. Only adds back-links. Never modifies content. |
-| **archived** | Ignored completely. |
-| **consolidated** | Event journals only. All Store items processed. Skipped. |
+| Status | What the gardener does |
+|--------|----------------------|
+| 🌱 **seed** | Maximum attention. Enriches, fills frontmatter, adds links, organizes. |
+| 🪴 **growing** | Active management. Adds links, updates beliefs, tracks goals. |
+| 🌳 **evergreen** | Hands off. Only adds back-links. Never touches content. |
+| 📦 **archived** | Invisible. Completely ignored. |
+| 🔗 **consolidated** | Event journals only. Fully processed. Skipped. |
 
-The gardener **never deletes**, **never auto-archives**, **never demotes** status.
+The gardener **never deletes**, **never auto-archives**, **never demotes** status. Your notes, your decisions.
 
-## Customizing Prompts
+## ✏️ Customizing prompts
 
-After init, prompts live at `.gardener/prompts/`:
+After init, prompts live at `.gardener/prompts/`. These are the actual instructions sent to the AI:
 
 ```
 .gardener/prompts/
-├── garden.md     # Main orchestrator
+├── garden.md     # Main orchestrator (all phases)
 ├── seed.md       # Phase 1
 ├── nurture.md    # Phase 2
 └── tend.md       # Phase 3
 ```
 
-Edit these directly to customize behavior. They are never auto-overwritten.
+Edit them directly. They're yours. The gardener never auto-overwrites them.
 
-Run `vault-gardener config regen` to regenerate from templates (overwrites edits).
+Want to start fresh? `vault-gardener config regen` regenerates from templates.
 
-## Presets
+## 🎭 Presets
 
-Three built-in presets:
+Don't want to configure everything? Pick a preset:
 
-| Preset | Structure | Best For |
+| Preset | Structure | Best for |
 |--------|-----------|----------|
-| **para-plus** | 11 numbered folders (PARA+) | Obsidian power users |
-| **zettelkasten** | inbox, zettelkasten, references | Zettelkasten practitioners |
-| **flat** | inbox, notes, archive | Minimal setups |
+| **para-plus** | 11 numbered folders (PARA+) | Obsidian power users who like hierarchy |
+| **zettelkasten** | inbox, zettelkasten, references | Zettelkasten purists |
+| **flat** | inbox, notes, archive | "I just want folders" minimalists |
 
 ```bash
 vault-gardener init --preset zettelkasten
 ```
 
-## Scheduling
+## ⏰ Scheduling
 
-### Background Daemon
-
-```bash
-vault-gardener start           # Start node-cron daemon
-vault-gardener stop            # Stop daemon
-```
-
-### System Service
+Set it and forget it. The gardener runs on a cron schedule:
 
 ```bash
-vault-gardener start --install   # Generate launchd (macOS) or systemd (Linux) config
+vault-gardener start             # Start node-cron daemon
+vault-gardener stop              # Stop daemon
+vault-gardener start --install   # Install as system service (launchd/systemd)
 ```
-
-Configure cron schedule in config:
 
 ```yaml
 schedule:
@@ -385,93 +356,95 @@ schedule:
   cron: "0 */4 * * *"    # Every 4 hours
 ```
 
-## Dashboard
+The daemon has built-in resilience — exponential backoff on consecutive failures, graceful shutdown, and health monitoring. It won't hammer your vault if things go wrong.
+
+## 📊 Dashboard
 
 ```bash
 vault-gardener status
 ```
 
-Shows:
-- Recent runs (date, phase, duration, items processed, status)
-- Vault health (total notes, inbox count, seed notes)
-- Inbox trend sparkline
-- Daemon status
+Shows recent runs, vault health (total notes, inbox count, seed notes), inbox trend sparkline, and daemon status. Use `--json` for machine-readable output.
 
-Use `--json` for machine-readable output.
+## 🔒 Preflight checks
 
-## Preflight Checks
+Before each run, the gardener sanity-checks your environment:
 
-Before each run, vault-gardener checks:
+- ✅ Vault directory accessible (5s timeout — catches unmounted drives)
+- ✅ No active editing in inbox (waits for your edits to settle)
+- ✅ No sync conflicts (iCloud, Syncthing, Dropbox)
+- ✅ Git state clean (no merge conflicts, no detached HEAD)
+- ✅ Disk space > 100MB
+- ✅ Provider CLI installed and on PATH
+- ✅ Prompt files exist
 
-- Vault directory is accessible (5s timeout)
-- No recent edits in inbox (configurable quiet period)
-- No sync conflicts (iCloud, Syncthing, etc.)
-- Git state is clean (no merge conflicts)
-- Sufficient disk space (100MB minimum)
-- Provider CLI is installed
-- Prompt files exist
+Skip with `--force`. Validate-only with `--validate`.
 
-Skip with `--force`. Run checks only with `--validate`.
+## 🔧 Recovery
 
-## Recovery
-
-If a run crashes or leaves stale state:
+Things happen. Processes crash. Locks go stale. The gardener has a built-in doctor:
 
 ```bash
 vault-gardener recover
 ```
 
-Fixes: stale lock files, orphan heartbeats, stale queue entries, corrupted metrics files. Reports: active locks, staged git changes.
+Auto-fixes stale locks, orphan heartbeats, expired queue entries, and corrupted metrics files. Reports anything it can't auto-fix (like an active lock held by a running process).
 
-## Failure Notifications
+## 📡 Failure notifications
 
-Set a webhook URL to receive failure alerts:
+Want to know when a run fails? Set a webhook:
 
 ```bash
 export GARDENER_WEBHOOK_URL=https://hooks.slack.com/services/...
 ```
 
-On failure, POSTs JSON with phase, duration, exit code, reason, and timestamp.
+POSTs JSON on failure: phase, duration, exit code, reason, timestamp. No local paths, no secrets.
 
-## What `.gardener/` Contains
+## 🗂️ What `.gardener/` contains
 
 ```
 .gardener/
-├── config.yaml          # Main config (user-editable)
-├── config.yaml.bak      # Auto-backup of last good config
-├── context.md           # Auto-generated vault context for LLM
-├── prompts/
-│   ├── garden.md        # Orchestrator prompt
-│   ├── seed.md          # Phase 1 prompt
-│   ├── nurture.md       # Phase 2 prompt
-│   └── tend.md          # Phase 3 prompt
+├── config.yaml              # Your config (edit this)
+├── config.yaml.bak          # Auto-backup of last good config
+├── context.md               # Auto-generated vault context for the LLM
+├── prompts/                 # The actual prompts (edit these too)
+│   ├── garden.md
+│   ├── seed.md
+│   ├── nurture.md
+│   └── tend.md
 ├── metrics/
-│   └── YYYY-MM-DD.json  # Run metrics
+│   └── YYYY-MM-DD.json      # Run metrics by day
 ├── logs/
-│   ├── gardener.log     # Structured JSON log
-│   └── last-run-output.txt  # Last provider output (10KB cap)
-├── queue.json           # Pending queued runs
-├── .lock                # PID lock (runtime only)
-├── .lock-heartbeat      # Lock liveness heartbeat
-└── .daemon-health       # Daemon health status
+│   ├── gardener.log          # Structured JSON log (rotated)
+│   └── last-run-output.txt   # Last provider output (10KB cap)
+├── queue.json                # Pending queued runs
+├── .lock                     # PID lock (runtime only)
+├── .lock-heartbeat           # Lock liveness proof
+└── .daemon-health            # Daemon status
 ```
 
 ## FAQ
 
 **Does it work without Obsidian?**
-Yes. vault-gardener works with any folder of `.md` files.
+Yes. Any folder of `.md` files. Logseq, Foam, Dendron, or a pile of markdown in Dropbox. The gardener doesn't care.
 
 **Does it need git?**
-No. Git is optional. Metrics degrade gracefully without it. Git commits are recommended for safety.
+No. Git is optional. Some metrics (notes moved) use git if available. Git commits before runs are *strongly* recommended for safety, but not required.
 
 **Will it delete my notes?**
-Never. The gardener only reorganizes, enriches, and connects. No information is ever deleted.
+No. Never. Not even once. The gardener only reorganizes, enriches, and connects.
 
-**Can I use it with multiple providers?**
-Yes. Override per-run with `--provider codex --tier power`.
+**Can I use different providers for different runs?**
+Yes. `vault-gardener run --provider codex --tier power` overrides per-run.
 
 **How do I undo changes?**
-If using git: `git log --oneline` then `git checkout <hash> -- .`
+If using git: `git log --oneline` then `git checkout <hash> -- .` and breathe.
+
+**How big of a vault can it handle?**
+Tested with 50k+ files. The metrics collector, preflight checks, and file walkers are all bounded with timeouts. If your vault is truly massive, tune the `resilience` config.
+
+**Is it safe to run unattended?**
+That's the whole point. Atomic locks, heartbeat-based liveness detection, preflight checks, failure notifications, and exponential backoff in the daemon. Run it on a cron and sleep well.
 
 ## License
 
