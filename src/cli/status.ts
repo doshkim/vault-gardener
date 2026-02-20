@@ -1,5 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import type { VaultDigest } from './digest.js';
 import chalk from 'chalk';
 import { getGardenerDir, loadConfig } from './config.js';
 import { readMetrics } from '../metrics/collector.js';
@@ -36,6 +37,30 @@ export async function statusCommand(options: StatusOptions): Promise<void> {
   }
 
   if (options.json) {
+    // Compute vault health for JSON output
+    let vaultHealth = null;
+    if (metrics.length > 0) {
+      const latest = metrics[0];
+      // Try to read suggestions from digest.json
+      let suggestions: string[] = [];
+      let lastDigest: string | null = null;
+      try {
+        const digestPath = join(gardenerDir, 'digest.json');
+        const digestRaw = await readFile(digestPath, 'utf-8');
+        const digest = JSON.parse(digestRaw) as VaultDigest;
+        suggestions = digest.suggestions ?? [];
+        lastDigest = digest.generated ?? null;
+      } catch { /* no digest yet */ }
+
+      vaultHealth = {
+        totalNotes: latest.vault_health.total_notes,
+        inboxItems: latest.vault_health.inbox_items,
+        seedNotes: latest.vault_health.seed_notes,
+        suggestions,
+        lastDigest,
+      };
+    }
+
     console.log(
       JSON.stringify(
         {
@@ -47,6 +72,7 @@ export async function statusCommand(options: StatusOptions): Promise<void> {
           daemon: daemonPid ? { pid: daemonPid, running: true } : { running: false },
           locked,
           recentRuns: metrics.slice(0, 10),
+          vaultHealth,
         },
         null,
         2

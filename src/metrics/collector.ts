@@ -113,7 +113,7 @@ async function walkMd(dir: string, opts?: WalkOptions): Promise<WalkResult> {
 }
 
 /** Count .md files in a single directory (non-recursive). */
-async function countInbox(dir: string): Promise<number> {
+export async function countInbox(dir: string): Promise<number> {
   try {
     const entries = await readdir(dir, { withFileTypes: true });
     return entries.filter((e) => e.isFile() && extname(e.name) === '.md').length;

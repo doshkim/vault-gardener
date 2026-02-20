@@ -5,3 +5,5 @@ export type { VaultScanResult, FolderMap, JournalStructure } from './scanner/det
 export { getPreset, listPresets } from './scanner/presets.js';
 export type { PresetConfig } from './scanner/presets.js';
 export type { GardenerConfig } from './cli/config.js';
+export type { VaultDigest } from './cli/digest.js';
+export { generateDigest } from './cli/digest.js';

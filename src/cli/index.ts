@@ -53,6 +53,13 @@ export function run(argv: string[]): void {
     .action(statusCommand);
 
   program
+    .command('digest')
+    .description('Generate vault health digest and write .gardener/digest.json')
+    .option('--json', 'Output as JSON')
+    .option('--weekly', 'Include weekly brief')
+    .action(digestAction);
+
+  program
     .command('recover')
     .description('Diagnose and fix stale state (locks, queue, metrics)')
     .action(recoverAction);
@@ -95,6 +102,11 @@ async function configSetAction(key: string, value: string): Promise<void> {
 async function configRegenAction(): Promise<void> {
   const { configRegen } = await import('./config.js');
   await configRegen();
+}
+
+async function digestAction(options: { json?: boolean; weekly?: boolean }): Promise<void> {
+  const { digestCommand } = await import('./digest.js');
+  await digestCommand(options);
 }
 
 async function recoverAction(): Promise<void> {

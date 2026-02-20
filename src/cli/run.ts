@@ -220,6 +220,14 @@ export async function runCommand(
     await writeMetrics(gardenerDir, metrics);
     console.log('\n' + formatSummary(metrics));
 
+    // Post-run digest generation
+    try {
+      const { generateDigest } = await import('./digest.js');
+      await generateDigest(cwd, { weekly: new Date().getDay() === 0 });
+    } catch {
+      // Digest generation is non-critical -- don't fail the run
+    }
+
     // Write last-run marker
     const lastRunPath = join(cwd, '.gardener-last-run.md');
     const lastRunContent = `---\ndate: ${metrics.date}\ntimestamp: ${metrics.timestamp}\nphase: ${resolvedPhase}\nprovider: ${config.provider}\nmodel: ${model}\nduration: ${duration}s\nexitCode: ${exitCode}\n---\n`;
