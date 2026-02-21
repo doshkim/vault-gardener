@@ -1,16 +1,21 @@
+import { createRequire } from 'node:module';
 import { Command } from 'commander';
 import { initCommand } from './init.js';
 import { runCommand } from './run.js';
 import { startCommand } from './start.js';
 import { stopCommand } from './stop.js';
 import { statusCommand } from './status.js';
+
+const require = createRequire(import.meta.url);
+const { version } = require('../../package.json');
+
 export function run(argv: string[]): void {
   const program = new Command();
 
   program
     .name('vault-gardener')
     .description('AI-powered vault maintenance pipeline for markdown knowledge bases')
-    .version('0.1.0');
+    .version(version);
 
   program
     .command('init')
