@@ -20,19 +20,25 @@ afterEach(async () => {
   await rm(tmpDir, { recursive: true, force: true });
 });
 
+/** Build a FeaturesConfig with all values set to the given boolean */
+function makeFeatures(value: boolean): FeaturesConfig {
+  const features = { ...DEFAULT_FEATURES };
+  for (const key of Object.keys(features) as (keyof FeaturesConfig)[]) {
+    features[key] = value;
+  }
+  return features;
+}
+
 /** Build config with all features OFF */
 function allFeaturesOff(): GardenerConfig {
-  const features = {} as Record<string, boolean>;
-  for (const key of Object.keys(DEFAULT_FEATURES)) features[key] = false;
-  return buildDefaultConfig({ features: features as FeaturesConfig });
+  return buildDefaultConfig({ features: makeFeatures(false) });
 }
 
 /** Build config with a single feature ON, all others OFF */
 function singleFeatureOn(key: keyof FeaturesConfig): GardenerConfig {
-  const features = {} as Record<string, boolean>;
-  for (const k of Object.keys(DEFAULT_FEATURES)) features[k] = false;
+  const features = makeFeatures(false);
   features[key] = true;
-  return buildDefaultConfig({ features: features as FeaturesConfig });
+  return buildDefaultConfig({ features });
 }
 
 /** Read all 5 rendered files */
@@ -614,12 +620,11 @@ describe('Feature isolation', () => {
   });
 
   test('multiple specific features → only those features present', async () => {
-    const features = {} as Record<string, boolean>;
-    for (const k of Object.keys(DEFAULT_FEATURES)) features[k] = false;
+    const features = makeFeatures(false);
     features.persona = true;
     features.memory = true;
     features.changelog = true;
-    const config = buildDefaultConfig({ features: features as FeaturesConfig });
+    const config = buildDefaultConfig({ features });
     await renderAll(tmpDir, config);
     const files = await readRendered(tmpDir);
 
