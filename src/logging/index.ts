@@ -36,29 +36,6 @@ function buildEntry(level: LogEntry['level'], event: string, data?: Partial<LogE
   };
 }
 
-// Track pending writes so flush() can await them
-let pendingWrites: Promise<void>[] = [];
-
-function writeLine(logPath: string, entry: LogEntry): void {
-  const line = JSON.stringify(entry) + '\n';
-  const p = appendFile(logPath, line, 'utf-8').catch(() => {
-    try {
-      process.stderr.write(`[gardener] ${entry.level}: ${entry.event}\n`);
-    } catch {
-      // last resort: silently discard
-    }
-  });
-  pendingWrites.push(p);
-  // Clean up resolved promises periodically
-  if (pendingWrites.length > 50) {
-    pendingWrites = pendingWrites.filter((pw) => {
-      let resolved = false;
-      pw.then(() => { resolved = true; });
-      return !resolved;
-    });
-  }
-}
-
 async function rotateIfNeeded(logPath: string, maxBytes: number, maxBackups: number): Promise<void> {
   try {
     const info = await stat(logPath);
@@ -88,6 +65,29 @@ export async function createLogger(
 
   const verbose = opts?.verbose ?? false;
 
+  // Per-instance pending writes — each logger tracks its own
+  let pendingWrites: Promise<void>[] = [];
+
+  function writeLine(entry: LogEntry): void {
+    const line = JSON.stringify(entry) + '\n';
+    const p = appendFile(logPath, line, 'utf-8').catch(() => {
+      try {
+        process.stderr.write(`[gardener] ${entry.level}: ${entry.event}\n`);
+      } catch {
+        // last resort: silently discard
+      }
+    });
+    pendingWrites.push(p);
+    // Clean up resolved promises periodically
+    if (pendingWrites.length > 50) {
+      pendingWrites = pendingWrites.filter((pw) => {
+        let resolved = false;
+        pw.then(() => { resolved = true; });
+        return !resolved;
+      });
+    }
+  }
+
   function log(level: LogEntry['level'], event: string, data?: Partial<LogEntry>): void {
     const entry = buildEntry(level, event, data);
 
@@ -97,7 +97,7 @@ export async function createLogger(
       entry.error = rest;
     }
 
-    writeLine(logPath, entry);
+    writeLine(entry);
   }
 
   return {

@@ -1,6 +1,6 @@
 import { mkdir, access, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { createInterface } from 'node:readline';
+import { createInterface, type Interface } from 'node:readline';
 import chalk from 'chalk';
 import { scanVault } from '../scanner/detect.js';
 import { getPreset, listPresets } from '../scanner/presets.js';
@@ -21,24 +21,34 @@ interface InitOptions {
   interactive?: boolean;
 }
 
-const rl = createInterface({ input: process.stdin, output: process.stdout });
-
-function ask(question: string): Promise<string> {
+function ask(rl: Interface, question: string): Promise<string> {
   return new Promise((resolve) => {
     rl.question(question, (answer) => resolve(answer.trim()));
   });
 }
 
-async function choose(prompt: string, options: string[], defaultIdx = 0): Promise<string> {
+async function choose(rl: Interface, prompt: string, options: string[], defaultIdx = 0): Promise<string> {
   console.log(chalk.cyan(prompt));
   for (let i = 0; i < options.length; i++) {
     const marker = i === defaultIdx ? chalk.green('→') : ' ';
     console.log(`  ${marker} ${i + 1}. ${options[i]}`);
   }
-  const answer = await ask(`Choice [${defaultIdx + 1}]: `);
+  const answer = await ask(rl, `Choice [${defaultIdx + 1}]: `);
   const idx = answer ? parseInt(answer, 10) - 1 : defaultIdx;
   if (idx < 0 || idx >= options.length) return options[defaultIdx];
   return options[idx];
+}
+
+async function choosePreset(rl: Interface): Promise<string> {
+  const presets = listPresets();
+  const choice = await choose(rl, 'Choose a vault preset:', [
+    'para-plus (PARA+ with 11 folders — recommended for Obsidian)',
+    'zettelkasten (Zettelkasten-style with inbox + notes)',
+    'flat (Minimal — inbox, notes, archive)',
+  ]);
+  if (choice.startsWith('zettelkasten')) return 'zettelkasten';
+  if (choice.startsWith('flat')) return 'flat';
+  return 'para-plus';
 }
 
 export async function initCommand(options: InitOptions): Promise<void> {
@@ -46,18 +56,36 @@ export async function initCommand(options: InitOptions): Promise<void> {
   const gardenerDir = getGardenerDir(cwd);
   const interactive = options.interactive !== false;
 
+  const rl = interactive
+    ? createInterface({ input: process.stdin, output: process.stdout })
+    : null;
+
+  try {
+    await runInit(cwd, gardenerDir, interactive, options, rl);
+  } finally {
+    rl?.close();
+  }
+}
+
+async function runInit(
+  cwd: string,
+  gardenerDir: string,
+  interactive: boolean,
+  options: InitOptions,
+  rl: Interface | null,
+): Promise<void> {
   console.log(chalk.bold('\nvault-gardener init\n'));
 
   // Check if .gardener already exists
   try {
     await access(gardenerDir);
-    if (interactive) {
+    if (interactive && rl) {
       const answer = await ask(
+        rl,
         chalk.yellow('.gardener/ already exists. Reset? (y/N): ')
       );
       if (answer.toLowerCase() !== 'y') {
         console.log('Aborted.');
-        rl.close();
         return;
       }
     }
@@ -90,14 +118,14 @@ export async function initCommand(options: InitOptions): Promise<void> {
     console.log(chalk.green(`Using preset: ${options.preset}`));
   } else if (scan.preset && scan.confidence > 0.7) {
     // Auto-detected with high confidence
-    if (interactive) {
+    if (interactive && rl) {
       console.log(chalk.cyan('\nDetected folder structure:'));
       for (const [key, value] of Object.entries(scan.detected)) {
         if (value) console.log(`  ${chalk.dim(key)}: ${value}/`);
       }
-      const answer = await ask('\nUse detected structure? (Y/n): ');
+      const answer = await ask(rl, '\nUse detected structure? (Y/n): ');
       if (answer.toLowerCase() === 'n') {
-        const presetName = await choosePreset();
+        const presetName = await choosePreset(rl);
         const preset = getPreset(presetName);
         config = buildDefaultConfig({
           folders: preset.folders as Record<string, string>,
@@ -116,8 +144,8 @@ export async function initCommand(options: InitOptions): Promise<void> {
     }
   } else {
     // No clear structure detected
-    if (interactive) {
-      const presetName = await choosePreset();
+    if (interactive && rl) {
+      const presetName = await choosePreset(rl);
       const preset = getPreset(presetName);
       config = buildDefaultConfig({
         folders: preset.folders as Record<string, string>,
@@ -126,6 +154,7 @@ export async function initCommand(options: InitOptions): Promise<void> {
       });
 
       const scaffold = await ask(
+        rl,
         chalk.cyan('Scaffold folders now? (Y/n): ')
       );
       if (scaffold.toLowerCase() !== 'n') {
@@ -160,7 +189,6 @@ export async function initCommand(options: InitOptions): Promise<void> {
           '  gemini  — https://github.com/google-gemini/gemini-cli\n'
       )
     );
-    rl.close();
     process.exit(1);
   }
 
@@ -170,8 +198,9 @@ export async function initCommand(options: InitOptions): Promise<void> {
 
   if (options.provider) {
     config.provider = options.provider as ProviderName;
-  } else if (interactive && providers.available.length > 1) {
+  } else if (interactive && rl && providers.available.length > 1) {
     const providerChoice = await choose(
+      rl,
       '\nChoose LLM provider:',
       providers.available.map(
         (p) => `${p}${p === providers.recommended ? ' (recommended)' : ''}`
@@ -185,8 +214,8 @@ export async function initCommand(options: InitOptions): Promise<void> {
   // Choose tier
   if (options.tier) {
     config.tier = options.tier as Tier;
-  } else if (interactive) {
-    const tierChoice = await choose('\nChoose model tier:', [
+  } else if (interactive && rl) {
+    const tierChoice = await choose(rl, '\nChoose model tier:', [
       'fast (recommended — quicker, cheaper)',
       'power (thorough, slower)',
     ]);
@@ -210,7 +239,7 @@ export async function initCommand(options: InitOptions): Promise<void> {
   await saveConfig(config, cwd);
   console.log(chalk.dim('Wrote .gardener/config.yaml'));
 
-  await renderAll(gardenerDir, config as unknown as Record<string, any>);
+  await renderAll(gardenerDir, config);
   console.log(chalk.dim('Generated .gardener/context.md and .gardener/prompts/'));
 
   // Step 5: Suggest .gitignore additions
@@ -230,18 +259,4 @@ export async function initCommand(options: InitOptions): Promise<void> {
       `\nReady! Run ${chalk.cyan('vault-gardener run')} to start your first garden cycle.\n`
     )
   );
-
-  rl.close();
-}
-
-async function choosePreset(): Promise<string> {
-  const presets = listPresets();
-  const choice = await choose('Choose a vault preset:', [
-    'para-plus (PARA+ with 11 folders — recommended for Obsidian)',
-    'zettelkasten (Zettelkasten-style with inbox + notes)',
-    'flat (Minimal — inbox, notes, archive)',
-  ]);
-  if (choice.startsWith('zettelkasten')) return 'zettelkasten';
-  if (choice.startsWith('flat')) return 'flat';
-  return 'para-plus';
 }

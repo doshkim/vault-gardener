@@ -1,5 +1,5 @@
 import type { Provider, RunOptions, RunResult, ProviderConfig } from './types.js';
-import { isCommandAvailable, spawnProvider } from './types.js';
+import { isCommandAvailable, spawnProvider } from './spawn.js';
 
 const DEFAULT_CONFIG: ProviderConfig = {
   power_model: 'opus',

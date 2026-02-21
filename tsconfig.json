@@ -14,7 +14,6 @@
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
-    "jsx": "react-jsx",
     "types": ["node"]
   },
   "include": ["src/**/*", "bin/**/*"],

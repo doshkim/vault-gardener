@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import type { Provider, RunOptions, RunResult, ProviderConfig } from './types.js';
-import { isCommandAvailable, spawnProvider } from './types.js';
+import { isCommandAvailable, spawnProvider } from './spawn.js';
 
 const DEFAULT_CONFIG: ProviderConfig = {
   power_model: 'gemini-2.5-pro',

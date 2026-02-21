@@ -1,6 +1,7 @@
 import Handlebars from 'handlebars';
 import { writeFile, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
+import type { GardenerConfig } from '../config/index.js';
 
 // ---------------------------------------------------------------------------
 // Embedded Handlebars templates
@@ -646,7 +647,7 @@ const PHASE_NAMES = ['garden', 'seed', 'nurture', 'tend'] as const;
  */
 export async function renderPrompts(
   gardenerDir: string,
-  config: Record<string, any>,
+  config: GardenerConfig,
 ): Promise<void> {
   const promptsDir = join(gardenerDir, 'prompts');
   await mkdir(promptsDir, { recursive: true });
@@ -665,7 +666,7 @@ export async function renderPrompts(
  */
 export async function renderContext(
   gardenerDir: string,
-  config: Record<string, any>,
+  config: GardenerConfig,
 ): Promise<void> {
   await mkdir(gardenerDir, { recursive: true });
 
@@ -679,7 +680,7 @@ export async function renderContext(
  */
 export async function renderAll(
   gardenerDir: string,
-  config: Record<string, any>,
+  config: GardenerConfig,
 ): Promise<void> {
   await Promise.all([
     renderContext(gardenerDir, config),

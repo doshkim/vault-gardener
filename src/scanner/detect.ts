@@ -76,28 +76,31 @@ async function exists(path: string): Promise<boolean> {
   }
 }
 
-async function countMarkdownFiles(dir: string): Promise<number> {
-  let count = 0;
+const COUNT_MAX_FILES = 50_000;
+
+async function countMarkdownFiles(dir: string, state = { count: 0 }): Promise<number> {
+  if (state.count >= COUNT_MAX_FILES) return state.count;
 
   let entries;
   try {
     entries = await readdir(dir, { withFileTypes: true });
   } catch {
-    return 0;
+    return state.count;
   }
 
   for (const entry of entries) {
+    if (state.count >= COUNT_MAX_FILES) break;
     if (entry.name.startsWith('.') || SKIP_DIRS.has(entry.name)) continue;
 
     const fullPath = join(dir, entry.name);
     if (entry.isDirectory()) {
-      count += await countMarkdownFiles(fullPath);
+      await countMarkdownFiles(fullPath, state);
     } else if (entry.isFile() && extname(entry.name) === '.md') {
-      count++;
+      state.count++;
     }
   }
 
-  return count;
+  return state.count;
 }
 
 async function detectTool(vaultPath: string): Promise<string | null> {

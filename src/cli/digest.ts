@@ -83,7 +83,7 @@ export async function generateDigest(
   // Generate suggestions
   const suggestions = await generateSuggestions({
     vaultPath,
-    folders: config.folders as Record<string, string>,
+    folders: config.folders,
   });
 
   // Build summary
@@ -110,7 +110,7 @@ export async function generateDigest(
   if (includeWeekly) {
     digest.weeklyBrief = await generateWeeklyBrief({
       vaultPath,
-      folders: config.folders as Record<string, string>,
+      folders: config.folders,
     });
   }
 

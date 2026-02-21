@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { performance } from 'node:perf_hooks';
 import type { Logger } from '../logging/index.js';
-import type { GardenerConfig } from '../cli/config.js';
+import type { GardenerConfig } from '../config/index.js';
 
 export interface PreflightResult {
   ok: boolean;
@@ -37,7 +37,7 @@ async function checkVaultAccessibility(
   }
 }
 
-async function isVaultQuiet(
+async function checkVaultQuiet(
   vaultPath: string,
   config: GardenerConfig,
   r: PreflightResult,
@@ -236,7 +236,7 @@ export async function runPreflight(
     return r;
   }
 
-  await isVaultQuiet(vaultPath, config, r);
+  await checkVaultQuiet(vaultPath, config, r);
   await detectSyncConflicts(vaultPath, r);
   validateGitState(vaultPath, r);
   checkDiskSpace(vaultPath, r);
