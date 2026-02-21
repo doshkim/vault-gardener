@@ -3,7 +3,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { deepMerge, resolveModel, resolveTimeout, getGardenerDir, getConfigPath, loadConfig, saveConfig } from '../loader.js';
-import { buildDefaultConfig } from '../schema.js';
+import { buildDefaultConfig, DEFAULT_FEATURES } from '../schema.js';
 import type { GardenerConfig } from '../schema.js';
 
 describe('deepMerge', () => {
@@ -120,6 +120,52 @@ describe('loadConfig / saveConfig round-trip', () => {
     expect(loaded.tier).toBe('power');
     expect(loaded.folders.inbox).toBe('00-inbox');
     expect(loaded.resilience.queue_enabled).toBe(true);
+  });
+
+  test('features round-trip through save/load', async () => {
+    const original = buildDefaultConfig();
+    original.features.memory = false;
+    original.features.changelog = false;
+    await saveConfig(original, tmpDir);
+    const loaded = await loadConfig(tmpDir);
+
+    expect(loaded.features.memory).toBe(false);
+    expect(loaded.features.changelog).toBe(false);
+    expect(loaded.features.persona).toBe(true);
+  });
+
+  test('backfills missing feature keys with defaults', async () => {
+    // Save config with only a subset of features
+    const original = buildDefaultConfig();
+    (original as any).features = { memory: false };
+    await saveConfig(original, tmpDir);
+    const loaded = await loadConfig(tmpDir);
+
+    // memory was explicitly set false — preserved
+    expect(loaded.features.memory).toBe(false);
+    // All other features backfilled to true
+    expect(loaded.features.persona).toBe(true);
+    expect(loaded.features.changelog).toBe(true);
+    expect(loaded.features.question_tracker).toBe(true);
+    expect(loaded.features.entity_auto_linking).toBe(true);
+  });
+
+  test('partial features config gets merged correctly', async () => {
+    const original = buildDefaultConfig();
+    (original as any).features = {
+      social_content: false,
+      adaptive_batch_sizing: false,
+    };
+    await saveConfig(original, tmpDir);
+    const loaded = await loadConfig(tmpDir);
+
+    expect(loaded.features.social_content).toBe(false);
+    expect(loaded.features.adaptive_batch_sizing).toBe(false);
+    // Backfilled keys
+    expect(loaded.features.memory).toBe(true);
+    expect(loaded.features.persona).toBe(true);
+    // Total key count
+    expect(Object.keys(loaded.features)).toHaveLength(23);
   });
 
   test('throws when no config exists', async () => {

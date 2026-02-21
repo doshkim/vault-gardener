@@ -4,6 +4,12 @@ import { join } from 'node:path';
 import type { GardenerConfig } from '../config/index.js';
 
 // ---------------------------------------------------------------------------
+// Handlebars helpers
+// ---------------------------------------------------------------------------
+
+Handlebars.registerHelper('eq', (a: unknown, b: unknown) => a === b);
+
+// ---------------------------------------------------------------------------
 // Embedded Handlebars templates
 // These are the source-of-truth templates that get rendered to .gardener/prompts/
 // at runtime. The .hbs files in src/prompts/templates/ are kept for reference
@@ -104,12 +110,45 @@ seed → consolidated                          (event journals, after Store item
 - Max 5 tags per note
 - Lead with key insight (inverted pyramid)
 
+{{#if features.persona}}
+## Gardener Persona
+
+**Active persona:** \`{{persona}}\`
+
+| Persona | Behavior |
+|---------|----------|
+| analytical | Facts and data. Minimal interpretation. Precise and structured. |
+| reflective | Questions and deeper meaning. Surfaces connections. Thoughtful commentary. |
+| coach | Prescriptive and action-oriented. Recommendations. Pushes for clarity. |
+
+{{/if}}
 ## Batch Limits
+
+**Base limits** (adjusted by adaptive batch sizing based on vault size):
 
 {{#each limits}}
 - {{@key}}: {{this}}
 {{/each}}
 
+{{#if features.adaptive_batch_sizing}}
+**Adaptive sizing rules:**
+- Vault < 100 notes → limits × 2 (small vault, process more aggressively)
+- Vault 100-500 notes → standard limits
+- Vault 500+ notes → limits ÷ 2 (minimum 3) (large vault, be selective)
+{{/if}}
+
+## Memory & Changelog
+
+{{#if features.memory}}- **Memory file**: \`.gardener/memory.md\` — read at start of each phase, updated at end
+{{/if}}{{#if features.changelog}}- **Changelog**: \`.gardener/changelog.md\` — appended after each phase (last 50 entries)
+{{/if}}
+
+{{#if features.social_content}}
+## Social Media Platforms
+
+{{#if social_platforms}}Target platforms: {{#each social_platforms}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}{{/if}}
+
+{{/if}}
 ## Protected Paths (NEVER touch)
 
 {{#each protected}}
@@ -131,6 +170,23 @@ Run the full vault gardener. Three phases execute in sequence:
 
 **No information is ever deleted** — only reorganized, enriched, and connected.
 
+{{#if features.persona}}
+## Persona
+
+{{#if (eq persona "analytical")}}You are an **analytical** gardener. Focus on facts, data, and minimal interpretation. Be precise, structured, and evidence-based. Avoid speculation.{{/if}}
+{{#if (eq persona "reflective")}}You are a **reflective** gardener. Ask questions, explore deeper meaning, and surface connections. Balance structure with thoughtful commentary.{{/if}}
+{{#if (eq persona "coach")}}You are a **coaching** gardener. Be prescriptive and action-oriented. Frame observations as recommendations. Push for clarity and commitment.{{/if}}
+
+{{/if}}
+{{#if features.memory}}
+## Memory
+
+Read \`.gardener/memory.md\` if it exists. This file contains context from previous runs:
+- What was done, what was deferred, running vault observations
+- Use this to avoid re-processing and to continue multi-run projects
+- Each phase will update memory with its results
+
+{{/if}}
 ## Protected Paths
 
 **NEVER read, modify, or process files in these locations:**
@@ -162,9 +218,9 @@ Read \`.gardener/prompts/tend.md\` and execute all steps.
 ## Output
 
 Combined summary from all three phases:
-- **Seed**: Inbox items triaged, journals created, salience tags applied, items routed
-- **Nurture**: Structure repaired, beliefs consolidated, playbooks/MOCs generated, links added
-- **Tend**: Stale notes reviewed, resources organized, notes enriched`,
+- **Seed**: Inbox items triaged, journals created, salience tags applied, items routed, questions extracted, commitments tracked
+- **Nurture**: Structure repaired, beliefs consolidated, playbooks/MOCs generated, entity + semantic + transitive links added, tags normalized, knowledge gaps identified, co-mention networks updated
+- **Tend**: Stale notes reviewed, resources organized, notes enriched with context anchoring and summaries, journals generated with themes/attention/goals/social content`,
 
   // ---------------------------------------------------------------------------
   seed: `# Seed — Intake & Routing
@@ -174,6 +230,24 @@ structured episodic and semantic memories.
 
 **No information is ever deleted** — only reorganized, enriched, and connected.
 
+{{#if features.persona}}
+## Persona
+
+{{#if (eq persona "analytical")}}You are an **analytical** gardener. Focus on facts, data, and minimal interpretation. Be precise, structured, and evidence-based. Avoid speculation.{{/if}}
+{{#if (eq persona "reflective")}}You are a **reflective** gardener. Ask questions, explore deeper meaning, and surface connections. Balance structure with thoughtful commentary.{{/if}}
+{{#if (eq persona "coach")}}You are a **coaching** gardener. Be prescriptive and action-oriented. Frame observations as recommendations. Push for clarity and commitment.{{/if}}
+
+{{/if}}
+{{#if features.memory}}
+## Memory
+
+Read \`.gardener/memory.md\` if it exists. This file contains context from previous runs —
+what was done, what was deferred, running observations about vault state. Use this to:
+- Avoid re-processing items handled in previous runs
+- Continue multi-run projects from where they left off
+- Make strategic decisions about what to prioritize this run
+
+{{/if}}
 ## Safety
 
 - **Never delete** — only reorganize, enrich, connect
@@ -248,6 +322,22 @@ Process episodic inbox items into journals.
    \`\`\`
 3. Delete inbox file
 
+{{#if features.this_time_last_year}}
+### This Time Last Year (#29)
+
+When creating or updating a daily journal, check for a journal from exactly 1 year ago
+(\`{{folders.journal}}/{YYYY-1}/{{journal.journal_subfolders.daily}}/{YYYY-1}-MM-DD.md\`).
+If found, add a callout at the top of the daily note (after frontmatter):
+
+\`\`\`markdown
+> [!calendar] This Time Last Year
+> {2-3 sentence summary of that day's journal}
+> — [[{YYYY-1}-MM-DD]]
+\`\`\`
+
+Only add once per daily note. Skip if callout already exists.
+
+{{/if}}
 ### LARGE captures (>= 50 words, OR has headings, OR contains [decision]/[milestone]/[insight])
 
 1. **Determine Kind** from content:
@@ -275,8 +365,41 @@ Process episodic inbox items into journals.
    \`\`\`
    Sections: \`## Context\`, \`## Takeaways\`, \`## Store\`
 
-4. **Link from daily note** under \`## Events\`
-5. Delete inbox file
+{{#if features.meeting_enhancement}}
+4. **Kind-specific enhancements:**
+
+   **Encounter (type: meeting):**
+   - Add \`## Action Items\` with checkboxes: \`- [ ] {action} — @{owner} (due: {date})\`
+   - Add \`## Key Quotes\` attributed to attendees
+   - Add \`## Follow-up Required\` with timeline
+   - Link to relevant \`{{folders.people}}/\` and \`{{folders.orgs}}/\` notes
+   - Update \`last-contact\` frontmatter on referenced person notes
+
+{{/if}}
+{{#if features.question_tracker}}
+5. **Extract questions** (#3 Question Tracker):
+   Scan journal content for substantive questions — "I wonder...", "need to figure out...",
+   sentences ending in \`?\` about decisions, strategy, or understanding.
+   **Filter:** Only track questions about decisions, strategy, understanding, or personal growth.
+   Ignore logistics, scheduling, and rhetorical questions.
+   Collect into \`## Open Questions\` section on the event journal.
+   Also append to the relevant MOC's \`## Open Questions\` section if a MOC exists for the topic.
+
+{{/if}}
+{{#if features.commitment_tracker}}
+6. **Extract commitments** (#24 Commitment Tracker):
+   Scan for commitments to people — "I told {person} I'd...", "promised to...",
+   "need to send {person}...", "agreed to..." with deadlines if mentioned.
+   Add to \`## Commitments\` section on the relevant person note in \`{{folders.people}}/\`:
+   \`\`\`markdown
+   - [ ] {commitment} — from [[{journal-date}]] (due: {date-if-mentioned})
+   \`\`\`
+   **Important:** Check the person note's existing commitments and open todo lists in the vault
+   to avoid duplicating items already tracked elsewhere.
+
+{{/if}}
+7. **Link from daily note** under \`## Events\`
+8. Delete inbox file
 
 ## Step 1.2 — Salience Tagger
 
@@ -331,6 +454,47 @@ git add -A && git commit -m "vault-gardener seed: {date} ({count} items processe
 
 ---
 
+{{#if features.changelog}}
+## Vault Changelog
+
+Append a human-readable summary of this seed run to \`.gardener/changelog.md\`:
+
+\`\`\`markdown
+### {YYYY-MM-DD HH:MM} — Seed
+- {1-line summary of what was processed}
+- Items: {count} triaged, {journals} journals created
+- Questions extracted: {count}
+- Commitments tracked: {count}
+\`\`\`
+
+Keep only the last 50 entries in the changelog file.
+
+{{/if}}
+---
+
+{{#if features.memory}}
+## Memory Update
+
+Update \`.gardener/memory.md\` with seed phase results. Use YAML frontmatter + markdown:
+
+\`\`\`markdown
+---
+last_run: {ISO timestamp}
+last_phase: seed
+items_processed: {count}
+items_deferred: {count}
+---
+## Seed Phase
+- Processed {count} inbox items
+- {any items deferred and why}
+- {observations about vault state relevant to next run}
+\`\`\`
+
+Merge with existing memory content — don't overwrite nurture/tend sections.
+
+---
+
+{{/if}}
 ## Output
 
 Summary:
@@ -339,7 +503,9 @@ Summary:
 - **Journals**: {daily} daily captures, {event} event journals created
 - **Salience**: {high} high, {medium} medium tags applied
 - **Routing**: {routed} items routed to folders
-- **People**: {researched} people notes auto-researched`,
+- **People**: {researched} people notes auto-researched
+- **Questions**: {count} substantive questions extracted
+- **Commitments**: {count} commitments tracked on person notes`,
 
   // ---------------------------------------------------------------------------
   nurture: `# Nurture — Structure & Knowledge Building
@@ -350,6 +516,23 @@ extraction, MOC generation, and semantic linking.
 
 **No information is ever deleted** — only reorganized, enriched, and connected.
 
+{{#if features.persona}}
+## Persona
+
+{{#if (eq persona "analytical")}}You are an **analytical** gardener. Focus on facts, data, and minimal interpretation. Be precise, structured, and evidence-based. Avoid speculation.{{/if}}
+{{#if (eq persona "reflective")}}You are a **reflective** gardener. Ask questions, explore deeper meaning, and surface connections. Balance structure with thoughtful commentary.{{/if}}
+{{#if (eq persona "coach")}}You are a **coaching** gardener. Be prescriptive and action-oriented. Frame observations as recommendations. Push for clarity and commitment.{{/if}}
+
+{{/if}}
+{{#if features.memory}}
+## Memory
+
+Read \`.gardener/memory.md\` if it exists. Use previous run context to:
+- Avoid re-processing already-consolidated beliefs
+- Continue linking projects from where they left off
+- Prioritize areas flagged in previous runs
+
+{{/if}}
 ## Safety
 
 - **Never delete** — only reorganize, enrich, connect
@@ -387,7 +570,25 @@ Fill missing fields with sensible defaults:
 - \`type\` → infer from folder location
 - \`tags\` → infer 1-3 from title/content
 
-## Step 1.2 — Orphan Triage
+{{#if features.tag_normalization}}
+## Step 1.3 — Tag Taxonomy Normalization
+
+Scan tags across recently modified notes. Detect tags that should be merged:
+
+- **Synonyms**: \`#machine-learning\` and \`#ml\`, \`#artificial-intelligence\` and \`#ai\`
+- **Plural/singular**: \`#projects\` and \`#project\`
+- **Spelling variants**: \`#behaviour\` and \`#behavior\`
+- **Hierarchy candidates**: \`#react\` could be under \`#frontend\`
+
+**Actions:**
+- Report suggested merges in the run's output — **never auto-merge** (user should confirm)
+- If a clear canonical form exists (the one used more often), note it
+- Log suggestions to \`## Tag Cleanup\` section in \`.gardener/changelog.md\`
+
+---
+
+{{/if}}
+## Step 1.4 — Orphan Triage
 
 Identify notes with no incoming links (orphans).
 
@@ -418,6 +619,37 @@ Scan all journals with \`## Store\` sections.
 **Never delete beliefs.** Mark \`⛔ retracted\` when outdated.
 
 **Batch limit:** Max {{limits.beliefs_per_run}} belief updates per run.
+
+{{#if features.co_mention_network}}
+## Step 2.0.1 — People Co-Mention Network
+
+For each person note in \`{{folders.people}}/\` modified or referenced in the last 14 days:
+
+1. Scan recent journals for co-mentions — when two people appear in the same journal entry
+2. Build or update a \`## Network\` section on the person note:
+   \`\`\`markdown
+   ## Network
+   Frequently mentioned alongside:
+   - [[Jane Smith]] (5 entries)
+   - [[Acme Corp]] (3 entries)
+   - [[Bob Johnson]] (2 entries)
+   \`\`\`
+3. Only include co-mentions appearing in 2+ journal entries
+4. Update counts if section already exists (don't duplicate)
+
+{{/if}}
+{{#if features.commitment_tracker}}
+## Step 2.0.2 — Commitment Compliance
+
+For each person note in \`{{folders.people}}/\`:
+1. Check \`## Commitments\` section for overdue items (past due date)
+2. Check open todo lists in the vault to avoid duplicating tracked items
+3. Flag overdue commitments in the run summary
+4. Cross-reference with recent journals — if a commitment was fulfilled, mark it:
+   \`- [x] {commitment} — completed [[{journal-date}]]\`
+
+{{/if}}
+---
 
 ## Step 2.1 — Playbook Builder
 
@@ -450,9 +682,47 @@ Generate Maps of Content for frequently-mentioned entities.
 
 **Batch limit:** Max {{limits.mocs_per_run}} new MOCs per run.
 
+{{#if features.knowledge_gaps}}
+### Knowledge Gap Detection (#19)
+
+During MOC generation/update, identify subtopics that are frequently referenced or implied
+but have no dedicated note in the vault:
+
+1. Scan MOC content and linked notes for entity/concept mentions without matching vault notes
+2. **Threshold:** Only flag gaps appearing in **5+ journal entries** (not just casual mentions)
+3. Add a \`## Knowledge Gaps\` section to the MOC:
+   \`\`\`markdown
+   ## Knowledge Gaps
+   Frequently mentioned but no dedicated note:
+   - **transformer architecture** — mentioned in 7 journals, referenced by [[ML Basics]], [[GPT Notes]]
+   - **CAP theorem** — mentioned in 5 journals, referenced by [[Distributed Systems]]
+   \`\`\`
+4. These are natural candidates for future learning or note creation
+{{/if}}
+
 ---
 
-## Step 3 — Semantic Similarity Linking
+{{#if features.entity_auto_linking}}
+## Step 3 — Entity Mention Auto-Linking
+
+Scan notes modified in the last 14 days for plain-text mentions of known entities
+(people, organizations, projects) that exist as vault notes but aren't WikiLinked.
+
+1. Build entity list from filenames in \`{{folders.people}}/\`, \`{{folders.orgs}}/\`, \`{{folders.projects}}/\`
+2. For each recently modified note, find plain-text mentions matching entity names (case-insensitive)
+3. Convert to WikiLinks: \`I talked to John Smith\` → \`I talked to [[John Smith]]\`
+4. **Safety rules:**
+   - Only link names that **exactly match** an existing note filename (case-insensitive)
+   - Skip names shorter than 4 characters (too many false positives)
+   - Don't link inside code blocks, URLs, or existing WikiLinks
+   - Use contextual disambiguation: "Apple" the company vs the fruit — only link if context
+     matches the note's \`type\` frontmatter
+5. **Batch limit:** Max {{limits.links_per_run}} auto-links per run (shared with Step 3.1 below)
+
+{{/if}}
+---
+
+## Step 3.1 — Semantic Similarity Linking
 
 Analyze notes modified in the last 14 days. Find related notes using:
 - **Tag overlap**: 2+ topic-specific tags shared (exclude structural tags)
@@ -462,9 +732,36 @@ Analyze notes modified in the last 14 days. Find related notes using:
 
 For each candidate pair with no existing link:
 - Add bidirectional WikiLinks in \`## See Also\` section
+{{#if features.backlink_context}}
+- **Include context sentence** (#10): Don't add bare links. Include the sentence that
+  establishes the connection:
+  \`\`\`markdown
+  ## See Also
+  - [[Thinking in Systems]] — "Applied the systems framework to the architecture decision"
+    (from [[Journal 2026-02-15]])
+  - [[Conway's Law]] — shares tags #architecture, #org-design
+  \`\`\`
+  Only add context for **newly-added links** (don't retroactively annotate existing links).
+{{/if}}
 
-**Limit:** Max {{limits.links_per_run}} new links per run.
+**Limit:** Max {{limits.links_per_run}} new links per run (shared with Step 3 entity linking).
 
+{{#if features.transitive_links}}
+## Step 3.2 — Transitive Link Suggestions
+
+If note A links to B and B links to C, but A does not link to C, and A and C share
+tags or keywords, suggest a direct link with the connection path annotated:
+
+\`\`\`markdown
+## See Also
+- [[Conway's Law]] — transitive via [[Org Design]]: "Your thoughts on hiring connect
+  to system design through organizational structure"
+\`\`\`
+
+**Scope limit:** Only analyze notes modified in the last 14 days, only 1 hop deep.
+Present as suggestions in \`## See Also\` — clearly marked as transitive connections.
+
+{{/if}}
 ---
 
 ## Commit (if git available)
@@ -475,16 +772,57 @@ git add -A && git commit -m "vault-gardener nurture: {date} ({beliefs} beliefs, 
 
 ---
 
+{{#if features.changelog}}
+## Vault Changelog
+
+Append a human-readable summary of this nurture run to \`.gardener/changelog.md\`:
+
+\`\`\`markdown
+### {YYYY-MM-DD HH:MM} — Nurture
+- {1-line summary of structural work}
+- Beliefs: {consolidated} consolidated, {contradictions} contradictions found
+- Links: {count} new (entity: {entity}, semantic: {semantic}, transitive: {transitive})
+- Tags: {count} merge suggestions
+- Knowledge gaps: {count} identified
+\`\`\`
+
+Keep only the last 50 entries in the changelog file.
+
+{{/if}}
+---
+
+{{#if features.memory}}
+## Memory Update
+
+Update \`.gardener/memory.md\` with nurture phase results:
+
+\`\`\`markdown
+## Nurture Phase
+- Consolidated {count} beliefs, {remaining} Store items remaining
+- Added {count} links, {orphans} orphans still unlinked
+- Tag merge suggestions: {list}
+- {observations for next run}
+\`\`\`
+
+Merge with existing memory — preserve seed/tend sections.
+
+---
+
+{{/if}}
 ## Output
 
 Summary:
 - **Structure**: {root} orphans moved, {dupes} duplicates found, {broken} links fixed
 - **Frontmatter**: {notes} notes fixed, {fields} fields added
+- **Tags**: {count} merge suggestions identified
 - **Orphans**: {linked} auto-linked, {flagged} flagged
 - **Beliefs**: {consolidated} beliefs consolidated, {contradictions} contradictions
 - **Playbooks**: {created} created, {updated} updated
-- **MOCs**: {created} new MOCs, {updated} refreshed
-- **Links**: {count} new links, {cross} cross-domain connections`,
+- **MOCs**: {created} new MOCs, {updated} refreshed, {gaps} knowledge gaps identified
+- **Entity links**: {count} plain-text mentions auto-linked
+- **Semantic links**: {count} new links with context sentences
+- **Transitive links**: {count} suggested
+- **People**: {networks} co-mention networks updated, {commitments} commitments reviewed`,
 
   // ---------------------------------------------------------------------------
   tend: `# Tend — Lifecycle & Enrichment
@@ -494,6 +832,23 @@ enrich sparse notes. Pruning, organizing, and nurturing the knowledge garden.
 
 **No information is ever deleted** — only reorganized, enriched, and connected.
 
+{{#if features.persona}}
+## Persona
+
+{{#if (eq persona "analytical")}}You are an **analytical** gardener. Focus on facts, data, and minimal interpretation. Be precise, structured, and evidence-based. Avoid speculation.{{/if}}
+{{#if (eq persona "reflective")}}You are a **reflective** gardener. Ask questions, explore deeper meaning, and surface connections. Balance structure with thoughtful commentary.{{/if}}
+{{#if (eq persona "coach")}}You are a **coaching** gardener. Be prescriptive and action-oriented. Frame observations as recommendations. Push for clarity and commitment.{{/if}}
+
+{{/if}}
+{{#if features.memory}}
+## Memory
+
+Read \`.gardener/memory.md\` if it exists. Use previous run context to:
+- Continue enrichment from where it left off
+- Avoid re-generating journals already created
+- Track enrichment queue progress across runs
+
+{{/if}}
 ## Safety
 
 - **Never delete** — only reorganize, enrich, connect
@@ -551,18 +906,95 @@ Generate higher-level journal summaries when threshold data exists.
 - **Sections**: Highlights, Decisions, Learnings, People, Open Items for Next Week
 - **Links**: Back-links to each daily + event journal
 
+**Additional weekly sections:**
+
+{{#if features.social_content}}
+\`## Social Content\` — Generate draft social media content targeting {{#each social_platforms}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}:
+- Source from that week's journals and newly created/modified notes
+- 2-3 post drafts per platform, adapted to platform style and length
+- **Exclude** personal/sensitive information, private names, health data, financial details
+- Focus on professional insights, learnings, and publicly shareable observations
+- Mark as \`> [!social] Draft — review before posting\`
+
+{{/if}}
+{{#if features.question_tracker}}
+\`## Question Tracker Update\` — Review open questions from this week's journals.
+For each: is there evidence in subsequent entries that it was answered? If yes,
+mark resolved with link to the answering journal. Surface unresolved questions.
+
+{{/if}}
 ### Monthly Summary
 - **Trigger**: 2+ weekly entries exist for the month
 - **Location**: \`{{folders.journal}}/YYYY/{{journal.journal_subfolders.monthly}}/YYYY-MM.md\`
 - **Style**: {{journal.style.monthly}}
 - **Sections**: Highlights, Goal Progress, Key Relationships, Knowledge Growth, Gardener Recommendations
 
+**Additional monthly sections:**
+
+{{#if features.belief_trajectory}}
+\`## Belief Changes\` (#15 Belief Trajectory) — Review the Consolidator's recent work.
+Include only when there are recent belief changes:
+- Newly confirmed beliefs (with evidence links)
+- Emerging contradictions between beliefs
+- Retracted beliefs and why
+- Group by topic for readability
+
+{{/if}}
+{{#if features.theme_detection}}
+\`## Emerging Themes\` (#16 Monthly Theme Detection) — Analyze all daily/event journals
+from this month to detect recurring themes the user hasn't explicitly tagged:
+- What topics consumed the most writing energy?
+- What unexpected patterns emerged?
+- Example: "This month's emerging theme: Convergence — multiple projects reached
+  critical milestones simultaneously."
+- Labels are suggestions, not permanent categories
+
+{{/if}}
+{{#if features.attention_allocation}}
+\`## Attention Allocation\` (#17) — Count journal entries referencing each role, project,
+and person. Present breakdown:
+- "This month: 40% [[Engineering Lead]], 25% [[Website Redesign]], 15% [[Jane Smith]], 20% misc."
+- Compare to previous month if available
+- Include note view counts / modification frequency as additional signal
+- **Caveat note**: "Based on journal mentions and note activity, not time spent."
+
+{{/if}}
+{{#if features.goal_tracking}}
+\`## Goal Progress\` (#21 Goal Tracking via Journal Evidence) — Scan yearly/quarterly
+notes for goal definitions (e.g., \`- [ ] Ship v2 by March\`). For each goal:
+- Count journal entries mentioning it
+- Link to milestone journals as evidence
+- Identify blockers mentioned in journals
+- **Present evidence counts and links** — do NOT estimate percentages
+- Example: "Ship v2: 4 mentions, 2 milestones ([[API Complete]], [[Frontend Draft]]),
+  1 blocker identified ([[Auth Issues]])"
+
+{{/if}}
 ### Quarterly Reflection
 - **Trigger**: 2+ monthly entries exist for the quarter
 - **Location**: \`{{folders.journal}}/YYYY/{{journal.journal_subfolders.quarterly}}/YYYY-QN.md\`
 - **Style**: {{journal.style.quarterly}}
 - **Sections**: Quarter in Review, Progress Against Themes, Goal Assessment, Key Learnings, Top Relationships, Gardener Recommendations
 
+**Additional quarterly sections:**
+
+{{#if features.seasonal_patterns}}
+\`## Seasonal Patterns\` (#20) — If 12+ months of journal data exists, compare current
+quarter's themes and attention allocation with the same quarter in previous years:
+- "You tend to focus on hiring in Q1"
+- "Journaling frequency drops in Q3"
+- Even weak 2-year patterns are interesting hypotheses — present as observations
+- If insufficient data (<12 months), skip this section entirely
+
+{{/if}}
+{{#if features.commitment_tracker}}
+\`## Commitment Review\` (#24) — Summarize commitment tracking from person notes:
+- Total commitments made this quarter
+- Completion rate
+- Overdue items with links
+- People with most outstanding commitments
+
+{{/if}}
 ### Yearly Review
 - **Trigger**: User sets themes in yearly note
 - **Location**: \`{{folders.journal}}/YYYY/{{journal.journal_subfolders.yearly}}/YYYY.md\`
@@ -570,22 +1002,93 @@ Generate higher-level journal summaries when threshold data exists.
 - **Sections**: Themes, Goals & Plans, Progress Tracker, Key Events, Key Learnings, Gardener Recommendations
 - **Lifecycle**: Created on Jan 1st (or init). Updated monthly. Comprehensive Q4 review.
 
+**Additional yearly sections:**
+
+{{#if features.seasonal_patterns}}
+\`## Seasonal Patterns\` (#20) — Full year pattern analysis. Compare month-by-month
+attention allocation. Surface rhythms: when do you write most? Which themes peak when?
+
+{{/if}}
+{{#if features.goal_tracking}}
+\`## Annual Goal Evidence\` (#21) — Comprehensive evidence-based goal review using all
+monthly summaries and quarterly reflections. Link to key milestone journals.
+
+{{/if}}
 ---
 
 ## Step 3 — Progressive Enrichment Queue
 
-Process sparse notes for enrichment:
+Process sparse notes for enrichment.
+
+{{#if features.adaptive_batch_sizing}}
+### Adaptive Batch Sizing (#36)
+
+Adjust enrichment limits based on vault size:
+| Vault Notes | enrich_per_run | Reasoning |
+|-------------|---------------|-----------|
+| < 100       | {{limits.enrich_per_run}} × 2 | Small vault, process more aggressively |
+| 100-500     | {{limits.enrich_per_run}} | Standard limits |
+| 500+        | max({{limits.enrich_per_run}} ÷ 2, 3) | Large vault, be selective |
+
+{{/if}}
+### Candidate Selection
 
 1. Scan vault for candidates:
    - Notes with \`status: seed\` and content < 200 words
    - Notes with 0 outgoing WikiLinks
    - Resource notes missing \`## Key Takeaways\`
-2. **Priority**: Notes referenced by more journals get enriched first
-3. Process top {{limits.enrich_per_run}} items:
-   - Extract key concepts and create/link resource notes
-   - Add 3-5 WikiLinks to related notes
-   - Expand thin sections
-   - Promote \`seed\` → \`growing\` if substantially enriched
+   - Notes >1000 words without a \`## TL;DR\` section
+
+{{#if features.enrichment_priority}}
+### Priority Scoring (#37)
+
+Rank candidates using **multi-factor priority** (not just journal references):
+
+| Factor | Weight | Description |
+|--------|--------|-------------|
+| Journal references | High | More journals mention it → higher priority |
+| Goal alignment | High | Connected to active goals in yearly/quarterly notes |
+| Salience tags | Medium | Has \`#salient\` or \`#notable\` |
+| Project activity | Medium | Referenced by active projects (not archived) |
+| Connectivity | Medium | Orphan notes (0 incoming links) get priority boost |
+| Recency | Low | More recently created notes slightly preferred |
+
+{{/if}}
+### Enrichment Actions
+
+Process top candidates (adjusted by adaptive batch sizing):
+
+**For all sparse notes (<200 words):**
+- Extract key concepts and create/link resource notes
+- Add 3-5 WikiLinks to related notes
+- Expand thin sections
+- Promote \`seed\` → \`growing\` if substantially enriched
+
+{{#if features.context_anchoring}}
+**Context Anchoring for sparse notes (#4):**
+When enriching a sparse note, scan the vault for *when and why* it was created.
+Find journal entries from the same week, identify what the user was working on.
+Add \`## Origin Context\`:
+\`\`\`markdown
+## Origin Context
+> [!context] Auto-generated by vault-gardener
+> You likely created this during the week you were working on [[Project X]],
+> after meeting with [[Person Y]]. Related journals: [[2026-01-15]], [[2026-01-17]].
+\`\`\`
+Use confidence language: "likely related to" when temporal correlation is strong,
+"created during the same period as" when weaker.
+
+{{/if}}
+{{#if features.auto_summary}}
+**Auto-Summary for long notes (#8):**
+Any note >1000 words without a \`## TL;DR\` gets an auto-generated 2-3 sentence summary
+placed after frontmatter:
+\`\`\`markdown
+> [!summary] Auto-generated by vault-gardener
+> {2-3 sentence summary capturing the key point and main conclusion}
+\`\`\`
+
+{{/if}}
 4. Report: "Enriched {count} notes, {remaining} remaining in queue"
 
 ---
@@ -598,13 +1101,58 @@ git add -A && git commit -m "vault-gardener tend: {date} ({enriched} enriched, {
 
 ---
 
+{{#if features.changelog}}
+## Vault Changelog
+
+Append a human-readable summary of this tend run to \`.gardener/changelog.md\`:
+
+\`\`\`markdown
+### {YYYY-MM-DD HH:MM} — Tend
+- {1-line summary of lifecycle/enrichment work}
+- Journals generated: {weekly} weekly, {monthly} monthly, {quarterly} quarterly
+- Notes enriched: {count} ({remaining} remaining)
+- Summaries added: {count}
+- Context anchors: {count}
+\`\`\`
+
+Keep only the last 50 entries in the changelog file.
+
+{{/if}}
+---
+
+{{#if features.memory}}
+## Memory Update
+
+Update \`.gardener/memory.md\` with tend phase results:
+
+\`\`\`markdown
+## Tend Phase
+- Enriched {count} notes, {remaining} in queue
+- Next enrichment candidates: {top 3 by priority score}
+- Journals generated: {list}
+- {observations about vault health for next run}
+## Vault Stats
+- Total notes: {count}
+- Seed notes: {count}
+- Orphan notes: {count}
+- Last full run: {date}
+\`\`\`
+
+This is the final phase — consolidate all memory sections into a clean file.
+
+---
+
+{{/if}}
 ## Output
 
 Summary:
 - **Stale review**: {flagged} notes flagged, {consolidated} journals consolidated
 - **Organization**: {organized} files organized into topic subfolders
 - **Journals**: {weekly} weekly, {monthly} monthly, {quarterly} quarterly generated
-- **Enrichment**: {enriched} notes enriched, {remaining} remaining in queue`,
+- **Enrichment**: {enriched} notes enriched, {remaining} remaining in queue
+- **Summaries**: {count} TL;DR sections added to long notes
+- **Context**: {count} origin context sections added to sparse notes
+- **Social**: {count} draft posts generated for {{#each social_platforms}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}`,
 };
 
 // ---------------------------------------------------------------------------

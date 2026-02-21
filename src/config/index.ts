@@ -2,7 +2,9 @@ export {
   type GardenerConfig,
   type JournalConfig,
   type ResilienceConfig,
+  type FeaturesConfig,
   DEFAULT_RESILIENCE,
+  DEFAULT_FEATURES,
   validateConfig,
   buildDefaultConfig,
 } from './schema.js';

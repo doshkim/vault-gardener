@@ -49,10 +49,65 @@ export const DEFAULT_RESILIENCE: ResilienceConfig = {
   preflight_enabled: true,
 };
 
+export interface FeaturesConfig {
+  memory: boolean;
+  entity_auto_linking: boolean;
+  question_tracker: boolean;
+  context_anchoring: boolean;
+  meeting_enhancement: boolean;
+  auto_summary: boolean;
+  backlink_context: boolean;
+  transitive_links: boolean;
+  co_mention_network: boolean;
+  belief_trajectory: boolean;
+  theme_detection: boolean;
+  attention_allocation: boolean;
+  knowledge_gaps: boolean;
+  seasonal_patterns: boolean;
+  goal_tracking: boolean;
+  commitment_tracker: boolean;
+  this_time_last_year: boolean;
+  tag_normalization: boolean;
+  persona: boolean;
+  changelog: boolean;
+  adaptive_batch_sizing: boolean;
+  enrichment_priority: boolean;
+  social_content: boolean;
+}
+
+export const DEFAULT_FEATURES: FeaturesConfig = {
+  memory: true,
+  entity_auto_linking: true,
+  question_tracker: true,
+  context_anchoring: true,
+  meeting_enhancement: true,
+  auto_summary: true,
+  backlink_context: true,
+  transitive_links: true,
+  co_mention_network: true,
+  belief_trajectory: true,
+  theme_detection: true,
+  attention_allocation: true,
+  knowledge_gaps: true,
+  seasonal_patterns: true,
+  goal_tracking: true,
+  commitment_tracker: true,
+  this_time_last_year: true,
+  tag_normalization: true,
+  persona: true,
+  changelog: true,
+  adaptive_batch_sizing: true,
+  enrichment_priority: true,
+  social_content: true,
+};
+
+export type Persona = 'analytical' | 'reflective' | 'coach';
+
 export interface GardenerConfig {
   version: number;
   provider: ProviderName;
   tier: Tier;
+  persona: Persona;
   folders: Record<string, string>;
   topics: Record<string, string[]>;
   frontmatter: {
@@ -70,8 +125,10 @@ export interface GardenerConfig {
   codex: { power_model: string; fast_model: string; timeout: number };
   gemini: { power_model: string; fast_model: string; timeout: number };
   journal: JournalConfig;
+  social_platforms: string[];
   protected: string[];
   resilience: ResilienceConfig;
+  features: FeaturesConfig;
 }
 
 export function validateConfig(
@@ -92,6 +149,11 @@ export function validateConfig(
   // Provider validation
   if (config.provider && !['claude', 'codex', 'gemini'].includes(config.provider)) {
     errors.push(`Invalid provider "${config.provider}". Must be: claude, codex, gemini`);
+  }
+
+  // Persona validation
+  if (config.persona && !['analytical', 'reflective', 'coach'].includes(config.persona)) {
+    errors.push(`Invalid persona "${config.persona}". Must be: analytical, reflective, coach`);
   }
 
   // Tier validation
@@ -120,6 +182,15 @@ export function validateConfig(
     }
   }
 
+  // Features validation
+  if (config.features && typeof config.features === 'object') {
+    for (const [key, val] of Object.entries(config.features)) {
+      if (typeof val !== 'boolean') {
+        warnings.push(`features.${key} should be a boolean (got ${typeof val})`);
+      }
+    }
+  }
+
   // Schedule cron validation
   if (config.schedule?.cron) {
     if (!cronValidate(config.schedule.cron)) {
@@ -135,6 +206,7 @@ export function buildDefaultConfig(overrides: Partial<GardenerConfig> = {}): Gar
     version: 1,
     provider: 'claude',
     tier: 'fast',
+    persona: 'reflective',
     folders: {
       inbox: '00-inbox',
       journal: '01-journal',
@@ -213,6 +285,7 @@ export function buildDefaultConfig(overrides: Partial<GardenerConfig> = {}): Gar
         daily: 'daily',
       },
     },
+    social_platforms: ['twitter', 'linkedin'],
     protected: [
       '.gardener',
       '.obsidian',
@@ -225,6 +298,7 @@ export function buildDefaultConfig(overrides: Partial<GardenerConfig> = {}): Gar
       'templates',
     ],
     resilience: { ...DEFAULT_RESILIENCE },
+    features: { ...DEFAULT_FEATURES },
     ...overrides,
   };
 }

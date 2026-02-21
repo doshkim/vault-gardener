@@ -19,6 +19,48 @@ Three phases, inspired by actual gardening:
 
 The gardener **never deletes your notes**. Ever. It only reorganizes, enriches, and connects.
 
+## Features
+
+vault-gardener ships with 23 features, all enabled by default. Every feature can be toggled independently via `features:` in your config.
+
+### Seed phase
+
+| Feature | Config key | Description |
+|---------|-----------|-------------|
+| Persona | `persona` | Gardener personality (analytical, reflective, coach) shapes tone and recommendations |
+| Memory | `memory` | Persistent cross-run context in `.gardener/memory.md` |
+| This Time Last Year | `this_time_last_year` | Surfaces journal entries from exactly one year ago |
+| Meeting Enhancement | `meeting_enhancement` | Adds action items, key quotes, and follow-ups to meeting notes |
+| Question Tracker | `question_tracker` | Extracts substantive questions and tracks resolution |
+| Commitment Tracker | `commitment_tracker` | Tracks promises made to people with due dates |
+| Changelog | `changelog` | Human-readable run log in `.gardener/changelog.md` |
+
+### Nurture phase
+
+| Feature | Config key | Description |
+|---------|-----------|-------------|
+| Tag Normalization | `tag_normalization` | Detects synonym, plural, and spelling variants in tags |
+| Co-mention Network | `co_mention_network` | Maps who appears alongside whom in journal entries |
+| Knowledge Gaps | `knowledge_gaps` | Identifies frequently referenced concepts with no dedicated note |
+| Entity Auto-linking | `entity_auto_linking` | Converts plain-text people/org/project names to WikiLinks |
+| Backlink Context | `backlink_context` | Adds explanatory sentences to new See Also links |
+| Transitive Links | `transitive_links` | Suggests A→C links when A→B→C and A,C share tags |
+
+### Tend phase
+
+| Feature | Config key | Description |
+|---------|-----------|-------------|
+| Social Content | `social_content` | Drafts platform-specific social media posts from weekly journals |
+| Belief Trajectory | `belief_trajectory` | Monthly review of confirmed, contradicted, and retracted beliefs |
+| Theme Detection | `theme_detection` | Detects recurring monthly themes not explicitly tagged |
+| Attention Allocation | `attention_allocation` | Monthly breakdown of journal mentions by role, project, person |
+| Goal Tracking | `goal_tracking` | Evidence-based goal progress using journal mentions and milestones |
+| Seasonal Patterns | `seasonal_patterns` | Compares quarterly/yearly rhythms across years |
+| Adaptive Batch Sizing | `adaptive_batch_sizing` | Scales processing limits based on vault size |
+| Enrichment Priority | `enrichment_priority` | Multi-factor scoring for which notes to enrich first |
+| Context Anchoring | `context_anchoring` | Adds origin context to sparse notes from contemporaneous journals |
+| Auto-summary | `auto_summary` | Generates TL;DR for notes longer than 1000 words |
+
 ## Quick start
 
 ```bash
@@ -55,6 +97,7 @@ vault-gardener delegates to an AI coding agent that reads your vault, understand
   │                                  └──────────────────┘                        │
   │                                                                              │
   │  + Salience tagging   + People auto-research   + Document cleanup            │
+  │  + Question tracker   + Commitment tracker    + This time last year         │
   └──────────────────────────────────────────────────────────────────────────────┘
                                          │
                                          ▼
@@ -69,6 +112,9 @@ vault-gardener delegates to an AI coding agent that reads your vault, understand
   │  Auto-MOC                Semantic Links                                      │
   │  • generate Maps of      • find related notes                                │
   │    Content for topics     • bidirectional links                               │
+  │                                                                              │
+  │  Entity auto-linking   + Tag normalization    + Transitive links             │
+  │  + Co-mention network  + Knowledge gaps                                      │
   └──────────────────────────────────────────────────────────────────────────────┘
                                          │
                                          ▼
@@ -83,6 +129,9 @@ vault-gardener delegates to an AI coding agent that reads your vault, understand
   │  Journal Generation                                                          │
   │  Daily ──▶ Weekly ──▶ Monthly ──▶ Quarterly ──▶ Yearly                      │
   │  Each: retrospective summary + forward-looking goals + recommendations       │
+  │                                                                              │
+  │  + Belief trajectory   + Theme detection      + Attention allocation         │
+  │  + Goal tracking       + Social content                                      │
   └──────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -247,6 +296,39 @@ resilience:
   preflight_enabled: true
 ```
 
+### 🎛️ Feature flags
+
+Toggle individual features on or off. All default to `true`:
+
+```yaml
+features:
+  memory: true
+  persona: true
+  changelog: true
+  question_tracker: true
+  commitment_tracker: true
+  this_time_last_year: true
+  meeting_enhancement: true
+  tag_normalization: true
+  co_mention_network: true
+  knowledge_gaps: true
+  entity_auto_linking: true
+  backlink_context: true
+  transitive_links: true
+  social_content: true
+  belief_trajectory: true
+  theme_detection: true
+  attention_allocation: true
+  goal_tracking: true
+  seasonal_patterns: true
+  adaptive_batch_sizing: true
+  enrichment_priority: true
+  context_anchoring: true
+  auto_summary: true
+```
+
+Set any feature to `false` to disable it. The core pipeline (triage, routing, structural integrity, consolidation, linking, enrichment) always runs.
+
 ## 📓 Journal system
 
 The gardener auto-generates higher-level journal summaries from your daily notes. Write daily, get weekly/monthly/quarterly/yearly for free.
@@ -265,10 +347,10 @@ The gardener auto-generates higher-level journal summaries from your daily notes
 
 | Level | Triggers when | What you get |
 |-------|---------------|-------------|
-| Weekly | 3+ daily entries | Highlights, Decisions, Learnings, People, Open Items |
-| Monthly | 2+ weeklies | Goal Progress, Key Relationships, Gardener Recommendations |
-| Quarterly | 2+ monthlies | Quarter Review, Progress vs Themes, Goal Assessment |
-| Yearly | You set themes | Themes, Goals, Progress Tracker, Key Events |
+| Weekly | 3+ daily entries | Highlights, Decisions, Learnings, People, Open Items, Social Content, Question Tracker |
+| Monthly | 2+ weeklies | Goal Progress, Key Relationships, Gardener Recommendations, Belief Changes, Emerging Themes, Attention Allocation, Goal Progress |
+| Quarterly | 2+ monthlies | Quarter Review, Progress vs Themes, Goal Assessment, Seasonal Patterns, Commitment Review |
+| Yearly | You set themes | Themes, Goals, Progress Tracker, Key Events, Seasonal Patterns, Annual Goal Evidence |
 
 Two styles — pick per cadence:
 
@@ -407,6 +489,8 @@ POSTs JSON on failure: phase, duration, exit code, reason, timestamp. No local p
 ├── config.yaml              # Your config (edit this)
 ├── config.yaml.bak          # Auto-backup of last good config
 ├── context.md               # Auto-generated vault context for the LLM
+├── memory.md                # Cross-run memory (auto-managed)
+├── changelog.md             # Human-readable run log (last 50 entries)
 ├── prompts/                 # The actual prompts (edit these too)
 │   ├── garden.md
 │   ├── seed.md

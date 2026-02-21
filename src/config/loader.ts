@@ -2,7 +2,7 @@ import { readFile, writeFile, mkdir, copyFile, rename } from 'node:fs/promises';
 import { join } from 'node:path';
 import { parse, stringify } from 'yaml';
 import chalk from 'chalk';
-import { validateConfig, buildDefaultConfig, DEFAULT_RESILIENCE } from './schema.js';
+import { validateConfig, buildDefaultConfig, DEFAULT_RESILIENCE, DEFAULT_FEATURES } from './schema.js';
 import type { GardenerConfig } from './schema.js';
 
 const GARDENER_DIR = '.gardener';
@@ -83,6 +83,9 @@ export async function loadConfig(cwd?: string): Promise<GardenerConfig> {
 
   // Fill missing resilience fields with defaults
   config.resilience = { ...DEFAULT_RESILIENCE, ...config.resilience };
+
+  // Fill missing feature flags with defaults
+  config.features = { ...DEFAULT_FEATURES, ...config.features };
 
   // Restore primary config if loaded from backup
   if (loadedFromBackup) {
