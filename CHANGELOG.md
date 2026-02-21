@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.1.3] - 2026-02-21
+
+### Added
+- 23 toggleable feature flags via `features:` config — every feature can be independently enabled/disabled
+- `FeaturesConfig` interface, `DEFAULT_FEATURES` constant, and feature validation in schema
+- Feature backfill in config loader — missing keys auto-filled with defaults
+- Handlebars `{{#if features.xxx}}` conditionals across all 5 templates (context, garden, seed, nurture, tend)
+- Features section in README with tables grouped by phase
+- Feature flags config section in README with YAML example
+- 74 new tests (164 total): feature toggle, isolation, persona rendering, social platforms, config interaction
+
+### Changed
+- Pipeline diagram in README updated with new capabilities per phase
+- Journal system table in README updated with additional sections per cadence level
+- `.gardener/` contents in README updated with `memory.md` and `changelog.md`
+
 ## [0.1.2] - 2026-02-20
 
 ### Added
