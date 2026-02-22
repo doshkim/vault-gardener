@@ -2,8 +2,8 @@ import type { Provider, RunOptions, RunResult, ProviderConfig } from './types.js
 import { isCommandAvailable, spawnProvider } from './spawn.js';
 
 const DEFAULT_CONFIG: ProviderConfig = {
-  power_model: 'o3',
-  fast_model: 'o4-mini',
+  power_model: 'gpt-5.3-codex',
+  fast_model: 'gpt-5.3-codex-spark',
   timeout: 600,
 };
 

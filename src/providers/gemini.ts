@@ -3,8 +3,8 @@ import type { Provider, RunOptions, RunResult, ProviderConfig } from './types.js
 import { isCommandAvailable, spawnProvider } from './spawn.js';
 
 const DEFAULT_CONFIG: ProviderConfig = {
-  power_model: 'gemini-2.5-pro',
-  fast_model: 'gemini-2.5-flash',
+  power_model: 'gemini-3.1-pro-preview',
+  fast_model: 'gemini-3-flash-preview',
   timeout: 600,
 };
 
