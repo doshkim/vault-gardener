@@ -155,6 +155,32 @@ Each provider has two tiers:
 
 Start with `fast`. Switch to `power` for deep nurture/tend runs. You'll feel the difference.
 
+## Authentication
+
+vault-gardener delegates to your chosen CLI tool — you authenticate with the provider directly, not with vault-gardener.
+
+| Provider | Environment variable | How to get it |
+|----------|---------------------|---------------|
+| Claude | `ANTHROPIC_API_KEY` | [console.anthropic.com](https://console.anthropic.com/) |
+| OpenAI | `OPENAI_API_KEY` | [platform.openai.com](https://platform.openai.com/api-keys) |
+| Gemini | `GEMINI_API_KEY` | [aistudio.google.com](https://aistudio.google.com/apikey) |
+
+Set your key in your shell profile (`~/.zshrc`, `~/.bashrc`, etc.):
+
+```bash
+export ANTHROPIC_API_KEY=sk-ant-...   # for Claude
+export OPENAI_API_KEY=sk-...          # for Codex
+export GEMINI_API_KEY=...             # for Gemini
+```
+
+Or pass it inline for a single run:
+
+```bash
+ANTHROPIC_API_KEY=sk-ant-... vault-gardener run
+```
+
+vault-gardener strips API keys from the environment before passing it to the LLM (so the model can't read your secrets), then re-injects only the key needed for authentication.
+
 ## Commands
 
 ```bash

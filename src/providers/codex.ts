@@ -34,6 +34,11 @@ export function createCodexProvider(config?: Partial<ProviderConfig>): Provider 
         timeout: opts.timeout || cfg.timeout,
         verbose: opts.verbose,
         gardenerDir: opts.gardenerDir,
+        // OPENAI_API_KEY is on the env denylist (prevents leaking secrets to LLMs)
+        // but Codex CLI needs it for authentication — pass it explicitly
+        env: process.env.OPENAI_API_KEY
+          ? { OPENAI_API_KEY: process.env.OPENAI_API_KEY }
+          : undefined,
       });
     },
   };
