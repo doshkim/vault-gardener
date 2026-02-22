@@ -1,6 +1,7 @@
 import { writeFile, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
+import { createHash } from 'node:crypto';
 
 /**
  * Generate a Linux systemd unit + timer for vault-gardener.
@@ -40,13 +41,19 @@ Persistent=true
 WantedBy=timers.target
 `;
 
-  const servicePath = join(unitDir, 'vault-gardener.service');
-  const timerPath = join(unitDir, 'vault-gardener.timer');
+  const suffix = vaultHash(vaultPath);
+  const servicePath = join(unitDir, `vault-gardener-${suffix}.service`);
+  const timerPath = join(unitDir, `vault-gardener-${suffix}.timer`);
 
   await writeFile(servicePath, service, 'utf-8');
   await writeFile(timerPath, timer, 'utf-8');
 
   return servicePath;
+}
+
+/** Short hash of vault path to make service names unique per vault. */
+function vaultHash(vaultPath: string): string {
+  return createHash('sha256').update(vaultPath).digest('hex').slice(0, 8);
 }
 
 function parseCronToOnCalendar(cron: string): string {

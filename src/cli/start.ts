@@ -36,7 +36,8 @@ export async function startCommand(options: StartOptions): Promise<void> {
     } else if (platform === 'linux') {
       const unitPath = await generateSystemdUnit(cwd, config.schedule.cron);
       console.log(chalk.green(`Generated systemd unit: ${unitPath}`));
-      console.log(chalk.dim('Run: systemctl --user enable vault-gardener && systemctl --user start vault-gardener'));
+      const unitName = unitPath.split('/').pop()!.replace('.service', '');
+      console.log(chalk.dim(`Run: systemctl --user enable ${unitName} && systemctl --user start ${unitName}`));
     } else {
       console.error(chalk.red(`Platform ${platform} not supported for --install. Use the daemon instead.`));
       process.exit(1);

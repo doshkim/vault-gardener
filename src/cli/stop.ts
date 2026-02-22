@@ -4,7 +4,7 @@ import chalk from 'chalk';
 import { getGardenerDir } from './config.js';
 
 export async function stopCommand(): Promise<void> {
-  const gardenerDir = getGardenerDir();
+  const gardenerDir = getGardenerDir(process.cwd());
   const pidFile = join(gardenerDir, '.daemon-pid');
 
   try {

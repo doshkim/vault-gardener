@@ -4394,7 +4394,7 @@ Provider exited with code ${result2.exitCode}`));
       await generateDigest2(cwd, { weekly: (/* @__PURE__ */ new Date()).getDay() === 0 });
     } catch {
     }
-    const lastRunPath = join16(cwd, ".gardener-last-run.md");
+    const lastRunPath = join16(gardenerDir, "last-run.md");
     const lastRunContent = `---
 date: ${metrics.date}
 timestamp: ${metrics.timestamp}
@@ -4504,6 +4504,7 @@ async function startDaemon(vaultPath, cronExpression) {
 import { writeFile as writeFile12 } from "fs/promises";
 import { join as join18 } from "path";
 import { homedir } from "os";
+import { createHash } from "crypto";
 async function generateLaunchdPlist(vaultPath, cronExpression) {
   const interval = parseCronToSeconds(cronExpression);
   const plist = `<?xml version="1.0" encoding="UTF-8"?>
@@ -4511,7 +4512,7 @@ async function generateLaunchdPlist(vaultPath, cronExpression) {
 <plist version="1.0">
 <dict>
   <key>Label</key>
-  <string>com.vault-gardener.daemon</string>
+  <string>com.vault-gardener.${vaultHash(vaultPath)}</string>
   <key>ProgramArguments</key>
   <array>
     <string>npx</string>
@@ -4535,10 +4536,13 @@ async function generateLaunchdPlist(vaultPath, cronExpression) {
     homedir(),
     "Library",
     "LaunchAgents",
-    "com.vault-gardener.daemon.plist"
+    `com.vault-gardener.${vaultHash(vaultPath)}.plist`
   );
   await writeFile12(plistPath, plist, "utf-8");
   return plistPath;
+}
+function vaultHash(vaultPath) {
+  return createHash("sha256").update(vaultPath).digest("hex").slice(0, 8);
 }
 function parseCronToSeconds(cron) {
   const parts = cron.split(" ");
@@ -4554,6 +4558,7 @@ function parseCronToSeconds(cron) {
 import { writeFile as writeFile13, mkdir as mkdir9 } from "fs/promises";
 import { join as join19 } from "path";
 import { homedir as homedir2 } from "os";
+import { createHash as createHash2 } from "crypto";
 async function generateSystemdUnit(vaultPath, cronExpression) {
   const interval = parseCronToOnCalendar(cronExpression);
   const unitDir = join19(homedir2(), ".config", "systemd", "user");
@@ -4582,11 +4587,15 @@ Persistent=true
 [Install]
 WantedBy=timers.target
 `;
-  const servicePath = join19(unitDir, "vault-gardener.service");
-  const timerPath = join19(unitDir, "vault-gardener.timer");
+  const suffix = vaultHash2(vaultPath);
+  const servicePath = join19(unitDir, `vault-gardener-${suffix}.service`);
+  const timerPath = join19(unitDir, `vault-gardener-${suffix}.timer`);
   await writeFile13(servicePath, service, "utf-8");
   await writeFile13(timerPath, timer, "utf-8");
   return servicePath;
+}
+function vaultHash2(vaultPath) {
+  return createHash2("sha256").update(vaultPath).digest("hex").slice(0, 8);
 }
 function parseCronToOnCalendar(cron) {
   const parts = cron.split(" ");
@@ -4625,7 +4634,8 @@ async function startCommand(options) {
     } else if (platform === "linux") {
       const unitPath = await generateSystemdUnit(cwd, config.schedule.cron);
       console.log(chalk7.green(`Generated systemd unit: ${unitPath}`));
-      console.log(chalk7.dim("Run: systemctl --user enable vault-gardener && systemctl --user start vault-gardener"));
+      const unitName = unitPath.split("/").pop().replace(".service", "");
+      console.log(chalk7.dim(`Run: systemctl --user enable ${unitName} && systemctl --user start ${unitName}`));
     } else {
       console.error(chalk7.red(`Platform ${platform} not supported for --install. Use the daemon instead.`));
       process.exit(1);
@@ -4652,7 +4662,7 @@ import { readFile as readFile13, unlink as unlink4 } from "fs/promises";
 import { join as join21 } from "path";
 import chalk8 from "chalk";
 async function stopCommand() {
-  const gardenerDir = getGardenerDir();
+  const gardenerDir = getGardenerDir(process.cwd());
   const pidFile = join21(gardenerDir, ".daemon-pid");
   try {
     const pid = parseInt(await readFile13(pidFile, "utf-8"), 10);

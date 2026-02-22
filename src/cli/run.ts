@@ -268,7 +268,7 @@ export async function runCommand(
     }
 
     // Write last-run marker
-    const lastRunPath = join(cwd, '.gardener-last-run.md');
+    const lastRunPath = join(gardenerDir, 'last-run.md');
     const lastRunContent = `---\ndate: ${metrics.date}\ntimestamp: ${metrics.timestamp}\nphase: ${resolvedPhase}\nprovider: ${config.provider}\nmodel: ${model}\nduration: ${duration}s\nexitCode: ${exitCode}\n---\n`;
     await writeFile(lastRunPath, lastRunContent, 'utf-8').catch(() => {});
   } finally {

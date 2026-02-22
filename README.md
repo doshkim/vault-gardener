@@ -469,6 +469,19 @@ schedule:
 
 The daemon has built-in resilience — exponential backoff on consecutive failures, graceful shutdown, and health monitoring. It won't hammer your vault if things go wrong.
 
+## 🗄️ Multiple vaults
+
+vault-gardener is vault-scoped by design. All state lives inside each vault's `.gardener/` directory — config, prompts, metrics, logs, reports, locks, and queue. Nothing is stored globally.
+
+Run against different vaults by changing directory:
+
+```bash
+cd ~/vaults/personal && vault-gardener run
+cd ~/vaults/work && vault-gardener run seed
+```
+
+Each vault has independent config, feature flags, and scheduling. System services (`--install`) are vault-specific — installing for two vaults creates two separate launchd plists or systemd units that won't collide.
+
 ## 📊 Dashboard
 
 ```bash
@@ -560,6 +573,7 @@ POSTs JSON on failure: phase, duration, exit code, reason, timestamp. No local p
 │   ├── gardener.log          # Structured JSON log (rotated)
 │   └── last-run-output.txt   # Last provider output (10KB cap)
 ├── run-report.json           # Latest LLM feature report (overwritten each run)
+├── last-run.md               # Last run marker (date, phase, provider, duration)
 ├── queue.json                # Pending queued runs
 ├── .lock                     # PID lock (runtime only)
 ├── .lock-heartbeat           # Lock liveness proof

@@ -1,6 +1,7 @@
 import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
+import { createHash } from 'node:crypto';
 
 /**
  * Generate a macOS launchd plist for vault-gardener.
@@ -18,7 +19,7 @@ export async function generateLaunchdPlist(
 <plist version="1.0">
 <dict>
   <key>Label</key>
-  <string>com.vault-gardener.daemon</string>
+  <string>com.vault-gardener.${vaultHash(vaultPath)}</string>
   <key>ProgramArguments</key>
   <array>
     <string>npx</string>
@@ -43,11 +44,16 @@ export async function generateLaunchdPlist(
     homedir(),
     'Library',
     'LaunchAgents',
-    'com.vault-gardener.daemon.plist'
+    `com.vault-gardener.${vaultHash(vaultPath)}.plist`
   );
 
   await writeFile(plistPath, plist, 'utf-8');
   return plistPath;
+}
+
+/** Short hash of vault path to make service names unique per vault. */
+function vaultHash(vaultPath: string): string {
+  return createHash('sha256').update(vaultPath).digest('hex').slice(0, 8);
 }
 
 function parseCronToSeconds(cron: string): number {
