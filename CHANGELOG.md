@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.1.4] - 2026-02-21
+
+### Changed
+- Gemini power model updated from `gemini-3-pro-preview` to `gemini-3.1-pro-preview`
+
 ## [0.1.3] - 2026-02-21
 
 ### Added

@@ -266,7 +266,7 @@ export function buildDefaultConfig(overrides: Partial<GardenerConfig> = {}): Gar
       timeout: 1500,
     },
     gemini: {
-      power_model: 'gemini-3-pro-preview',
+      power_model: 'gemini-3.1-pro-preview',
       fast_model: 'gemini-3-flash-preview',
       timeout: 1500,
     },

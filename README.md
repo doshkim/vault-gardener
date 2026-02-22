@@ -151,7 +151,7 @@ Each provider has two tiers:
 |----------|------------------|-----------------------|
 | Claude | `opus` | `sonnet` |
 | OpenAI | `gpt-5.3-codex` | `gpt-5.3-codex-spark` |
-| Gemini | `gemini-3-pro-preview` | `gemini-3-flash-preview` |
+| Gemini | `gemini-3.1-pro-preview` | `gemini-3-flash-preview` |
 
 Start with `fast`. Switch to `power` for deep nurture/tend runs. You'll feel the difference.
 
