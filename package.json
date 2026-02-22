@@ -1,6 +1,6 @@
 {
   "name": "vault-gardener",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "AI-powered vault maintenance pipeline for markdown knowledge bases. Seed → Nurture → Tend.",
   "type": "module",
   "bin": {
@@ -14,6 +14,7 @@
     "LICENSE"
   ],
   "scripts": {
+    "prepare": "tsup",
     "build": "tsup",
     "dev": "tsup --watch",
     "lint": "tsc --noEmit",
