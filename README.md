@@ -61,12 +61,24 @@ vault-gardener ships with 23 features, all enabled by default. Every feature can
 | Context Anchoring | `context_anchoring` | Adds origin context to sparse notes from contemporaneous journals |
 | Auto-summary | `auto_summary` | Generates TL;DR for notes longer than 1000 words |
 
+## Install
+
+```bash
+bun add -g github:doshkim/vault-gardener
+```
+
+Or with npm:
+
+```bash
+npm install -g github:doshkim/vault-gardener
+```
+
 ## Quick start
 
 ```bash
-npx vault-gardener init      # detect structure, pick provider, generate config
-vault-gardener run            # run full pipeline (seed → nurture → tend)
-vault-gardener status         # see what happened
+vault-gardener init      # detect structure, pick provider, generate config
+vault-gardener run       # run full pipeline (seed → nurture → tend)
+vault-gardener status    # see what happened
 ```
 
 That's it. Three commands. Your inbox is clear and your vault has structure.
@@ -423,9 +435,7 @@ After init, prompts live at `.gardener/prompts/`. These are the actual instructi
 └── tend.md       # Phase 3
 ```
 
-Edit them directly. They're yours. The gardener never auto-overwrites them.
-
-Want to start fresh? `vault-gardener config regen` regenerates from templates.
+Prompts are auto-regenerated from your config before each run, so config changes (feature flags, folders, limits) take effect immediately. To manually regenerate: `vault-gardener config regen`.
 
 ## 🎭 Presets
 
