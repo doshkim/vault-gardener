@@ -5,6 +5,8 @@ import chalk from 'chalk';
 import { getGardenerDir, loadConfig } from './config.js';
 import { readMetrics } from '../metrics/collector.js';
 import { isLocked } from '../lock/index.js';
+import { readLatestReport } from '../reports/index.js';
+import type { ParsedReport } from '../reports/index.js';
 
 interface StatusOptions {
   json?: boolean;
@@ -24,6 +26,7 @@ export async function statusCommand(options: StatusOptions): Promise<void> {
 
   const metrics = await readMetrics(gardenerDir, 30);
   const locked = await isLocked(gardenerDir);
+  const latestReport = await readLatestReport(gardenerDir);
 
   // Check daemon
   let daemonPid: number | null = null;
@@ -73,6 +76,7 @@ export async function statusCommand(options: StatusOptions): Promise<void> {
           locked,
           recentRuns: metrics.slice(0, 10),
           vaultHealth,
+          featureActivity: latestReport ? formatReportJson(latestReport) : null,
         },
         null,
         2
@@ -139,5 +143,76 @@ export async function statusCommand(options: StatusOptions): Promise<void> {
     }
   }
 
+  // Feature Activity from latest report
+  if (latestReport) {
+    printFeatureActivity(latestReport);
+  }
+
   console.log('');
+}
+
+function printFeatureActivity(report: ParsedReport): void {
+  const phases = report.phases;
+  if (phases.length === 0) return;
+
+  const phaseNames = phases.map((p) => p.phase).join(', ');
+  const time = report.timestamp.slice(11, 16);
+
+  console.log(chalk.cyan(`\nFeature Activity (last run — ${phaseNames}, ${time})`));
+
+  for (const phase of phases) {
+    for (const f of phase.features) {
+      const icon = f.status === 'executed' ? chalk.green('✓')
+        : f.status === 'error' ? chalk.red('✗')
+        : chalk.dim('–');
+      const detail = formatFeatureDetail(f);
+      console.log(`  ${icon} ${f.feature}${detail ? ` (${detail})` : ''}`);
+    }
+  }
+
+  // Warnings
+  const warnings = [
+    ...report._parsed.validationWarnings,
+    ...report._parsed.missingFeatures.map((f) => `${f} enabled but not reported`),
+  ];
+  if (warnings.length > 0) {
+    console.log('');
+    console.log(chalk.cyan('  Warnings:'));
+    for (const w of warnings) {
+      console.log(chalk.yellow(`  ⚠ ${w}`));
+    }
+  }
+}
+
+function formatFeatureDetail(f: { status: string; reason?: string; notes?: string; counts: Record<string, number> }): string {
+  if (f.status === 'skipped' && f.reason) return `skipped: ${f.reason}`;
+  if (f.status === 'error' && f.reason) return `error: ${f.reason}`;
+  if (f.notes) return f.notes;
+
+  const entries = Object.entries(f.counts ?? {});
+  if (entries.length === 0) return '';
+  return entries.map(([k, v]) => `${v} ${k.replace(/_/g, ' ')}`).join(', ');
+}
+
+function formatReportJson(report: ParsedReport) {
+  return {
+    timestamp: report.timestamp,
+    phases: report.phases.map((p) => ({
+      phase: p.phase,
+      started: p.started,
+      features: p.features.map((f) => ({
+        feature: f.feature,
+        status: f.status,
+        reason: f.reason,
+        counts: f.counts,
+        notes: f.notes,
+      })),
+    })),
+    summary: report.summary,
+    warnings: [
+      ...(report.warnings ?? []),
+      ...report._parsed.validationWarnings,
+      ...report._parsed.missingFeatures.map((f) => `${f} enabled but not reported`),
+    ],
+  };
 }

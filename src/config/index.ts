@@ -5,6 +5,7 @@ export {
   type FeaturesConfig,
   DEFAULT_RESILIENCE,
   DEFAULT_FEATURES,
+  FEATURE_KEYS,
   validateConfig,
   buildDefaultConfig,
 } from './schema.js';

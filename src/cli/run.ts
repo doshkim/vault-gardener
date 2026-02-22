@@ -17,6 +17,8 @@ import { runPreflight } from '../preflight/index.js';
 import { notifyFailure } from '../notify/index.js';
 import { collectPreMetrics, collectPostMetrics, writeMetrics } from '../metrics/collector.js';
 import { formatSummary } from '../metrics/format.js';
+import { parseRunReport, archiveReport, writeGardeningLog } from '../reports/index.js';
+import type { ParsedReport } from '../reports/index.js';
 import type { ProviderName, Tier, RunOptions } from '../providers/types.js';
 import type { RunMetrics } from '../metrics/collector.js';
 
@@ -198,6 +200,38 @@ export async function runCommand(
     // Post-metrics
     const post = await collectPostMetrics(cwd, config, pre);
     const duration = Math.round((Date.now() - startTime) / 1000);
+
+    // Parse LLM feature report + write gardening log
+    let report: ParsedReport | null = null;
+    try {
+      report = await parseRunReport(cwd, config.features);
+      if (report) {
+        for (const w of report._parsed.validationWarnings) {
+          logger.warn('report_validation', { context: { warning: w } });
+        }
+        if (report._parsed.missingFeatures.length > 0) {
+          logger.warn('report_missing_features', { context: { features: report._parsed.missingFeatures } });
+        }
+        await archiveReport(gardenerDir, report);
+      } else {
+        logger.warn('report_not_found');
+      }
+    } catch {
+      logger.warn('report_parse_failed');
+    }
+
+    // Write daily gardening log (works with or without LLM report)
+    try {
+      await writeGardeningLog(gardenerDir, report, {
+        pre,
+        post,
+        duration,
+        phase: resolvedPhase,
+        config,
+      });
+    } catch {
+      // Non-critical — don't fail the run
+    }
 
     const metrics: RunMetrics = {
       date: new Date().toISOString().split('T')[0],

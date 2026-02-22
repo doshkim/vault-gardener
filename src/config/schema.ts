@@ -75,6 +75,32 @@ export interface FeaturesConfig {
   social_content: boolean;
 }
 
+export const FEATURE_KEYS = Object.keys({
+  memory: true,
+  entity_auto_linking: true,
+  question_tracker: true,
+  context_anchoring: true,
+  meeting_enhancement: true,
+  auto_summary: true,
+  backlink_context: true,
+  transitive_links: true,
+  co_mention_network: true,
+  belief_trajectory: true,
+  theme_detection: true,
+  attention_allocation: true,
+  knowledge_gaps: true,
+  seasonal_patterns: true,
+  goal_tracking: true,
+  commitment_tracker: true,
+  this_time_last_year: true,
+  tag_normalization: true,
+  persona: true,
+  changelog: true,
+  adaptive_batch_sizing: true,
+  enrichment_priority: true,
+  social_content: true,
+} satisfies FeaturesConfig) as (keyof FeaturesConfig)[];
+
 export const DEFAULT_FEATURES: FeaturesConfig = {
   memory: true,
   entity_auto_linking: true,

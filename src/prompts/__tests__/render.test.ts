@@ -807,3 +807,111 @@ describe('Config interactions', () => {
     }
   });
 });
+
+// ===========================================================================
+// G. Run Report section tests
+// ===========================================================================
+
+describe('Run Report section', () => {
+  test('all phases include Run Report section when features enabled', async () => {
+    const config = buildDefaultConfig();
+    await renderAll(tmpDir, config);
+    const files = await readRendered(tmpDir);
+
+    expect(files.seed).toContain('## Run Report');
+    expect(files.nurture).toContain('## Run Report');
+    expect(files.tend).toContain('## Run Report');
+    expect(files.garden).toContain('## Run Report');
+  });
+
+  test('seed Run Report lists seed-phase features', async () => {
+    const config = buildDefaultConfig();
+    await renderAll(tmpDir, config);
+    const { seed } = await readRendered(tmpDir);
+
+    expect(seed).toContain('`memory`');
+    expect(seed).toContain('`question_tracker`');
+    expect(seed).toContain('`commitment_tracker`');
+    expect(seed).toContain('`this_time_last_year`');
+    expect(seed).toContain('`meeting_enhancement`');
+    expect(seed).toContain('run-report.json');
+  });
+
+  test('nurture Run Report lists nurture-phase features', async () => {
+    const config = buildDefaultConfig();
+    await renderAll(tmpDir, config);
+    const { nurture } = await readRendered(tmpDir);
+
+    expect(nurture).toContain('`tag_normalization`');
+    expect(nurture).toContain('`co_mention_network`');
+    expect(nurture).toContain('`entity_auto_linking`');
+    expect(nurture).toContain('`knowledge_gaps`');
+    expect(nurture).toContain('`backlink_context`');
+    expect(nurture).toContain('`transitive_links`');
+  });
+
+  test('tend Run Report lists tend-phase features', async () => {
+    const config = buildDefaultConfig();
+    await renderAll(tmpDir, config);
+    const { tend } = await readRendered(tmpDir);
+
+    expect(tend).toContain('`social_content`');
+    expect(tend).toContain('`belief_trajectory`');
+    expect(tend).toContain('`theme_detection`');
+    expect(tend).toContain('`auto_summary`');
+    expect(tend).toContain('`context_anchoring`');
+    expect(tend).toContain('`enrichment_priority`');
+  });
+
+  test('disabled features excluded from Run Report instruction', async () => {
+    const config = buildDefaultConfig({
+      features: { ...DEFAULT_FEATURES, memory: false, question_tracker: false },
+    });
+    await renderAll(tmpDir, config);
+    const { seed } = await readRendered(tmpDir);
+
+    // The Run Report section should exist
+    expect(seed).toContain('## Run Report');
+    // But disabled features should not be listed in the feature report instructions
+    // (they're guarded by {{#if features.xxx}})
+    const reportSection = seed.split('## Run Report')[1].split('## Output')[0];
+    expect(reportSection).not.toContain('`memory`');
+    expect(reportSection).not.toContain('`question_tracker`');
+    // Enabled features should still be there
+    expect(reportSection).toContain('`commitment_tracker`');
+  });
+
+  test('all features OFF → Run Report still has core steps', async () => {
+    const config = allFeaturesOff();
+    await renderAll(tmpDir, config);
+    const { seed, nurture, tend } = await readRendered(tmpDir);
+
+    // Core steps should always be present
+    expect(seed).toContain('`cleanup`');
+    expect(seed).toContain('`triage`');
+    expect(seed).toContain('`binder`');
+    expect(nurture).toContain('`structural_integrity`');
+    expect(nurture).toContain('`consolidator`');
+    expect(tend).toContain('`stale_review`');
+    expect(tend).toContain('`enrichment`');
+  });
+
+  test('garden template mentions multi-phase run-report.json workflow', async () => {
+    const config = buildDefaultConfig();
+    await renderAll(tmpDir, config);
+    const { garden } = await readRendered(tmpDir);
+
+    expect(garden).toContain('seed');
+    expect(garden).toContain('append');
+  });
+
+  test('Run Report includes JSON structure example', async () => {
+    const config = buildDefaultConfig();
+    await renderAll(tmpDir, config);
+    const { seed } = await readRendered(tmpDir);
+
+    expect(seed).toContain('"version": 1');
+    expect(seed).toContain('"phases"');
+    expect(seed).toContain('"phase": "seed"');
+  });
+});

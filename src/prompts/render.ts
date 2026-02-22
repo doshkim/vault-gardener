@@ -215,6 +215,12 @@ Read \`.gardener/prompts/nurture.md\` and execute all steps.
 ### Phase 3: Tend
 Read \`.gardener/prompts/tend.md\` and execute all steps.
 
+## Run Report
+
+Each phase template includes instructions to write \`.gardener/run-report.json\`.
+The **seed** phase creates the file. **Nurture** and **tend** read the existing file
+and append their phase to the \`phases\` array. The final file contains all three phases.
+
 ## Output
 
 Combined summary from all three phases:
@@ -495,6 +501,50 @@ Merge with existing memory content — don't overwrite nurture/tend sections.
 ---
 
 {{/if}}
+## Run Report
+
+After completing all steps, write a JSON file to \`.gardener/run-report.json\`:
+
+\\\`\\\`\\\`json
+{
+  "version": 1,
+  "timestamp": "{ISO-8601 timestamp}",
+  "phases": [{
+    "phase": "seed",
+    "started": true,
+    "features": [
+      { "feature": "{key}", "status": "executed|skipped|error", "counts": { ... }, "reason": "{if skipped/error}" }
+    ]
+  }],
+  "summary": "{1-2 sentence summary of what was done}",
+  "warnings": []
+}
+\\\`\\\`\\\`
+
+Report these features (only report enabled features listed here):
+{{#if features.memory}}- \`memory\` — counts: \`{ "read": 0|1, "updated": 0|1 }\`
+{{/if}}{{#if features.changelog}}- \`changelog\` — counts: \`{ "entries_written": 0|1 }\`
+{{/if}}{{#if features.persona}}- \`persona\` — counts: \`{ "applied": 0|1 }\`
+{{/if}}{{#if features.this_time_last_year}}- \`this_time_last_year\` — counts: \`{ "lookbacks_added": {n} }\`
+{{/if}}{{#if features.meeting_enhancement}}- \`meeting_enhancement\` — counts: \`{ "meetings_enhanced": {n} }\`
+{{/if}}{{#if features.question_tracker}}- \`question_tracker\` — counts: \`{ "questions_extracted": {n} }\`
+{{/if}}{{#if features.commitment_tracker}}- \`commitment_tracker\` — counts: \`{ "commitments_tracked": {n} }\`
+{{/if}}
+
+Also report core steps as features:
+- \`cleanup\` — counts: \`{ "files_cleaned": {n} }\`
+- \`triage\` — counts: \`{ "episodic": {n}, "entity": {n} }\`
+- \`binder\` — counts: \`{ "daily_captures": {n}, "event_journals": {n} }\`
+- \`salience\` — counts: \`{ "high": {n}, "medium": {n} }\`
+- \`routing\` — counts: \`{ "items_routed": {n} }\`
+
+**Rules:**
+- Report EVERY listed feature, even if skipped (use status "skipped" with a reason)
+- Write valid JSON — no trailing commas, no comments
+- If \`.gardener/run-report.json\` already exists (multi-phase run), read it first and APPEND your phase to the \`phases\` array
+
+---
+
 ## Output
 
 Summary:
@@ -809,6 +859,54 @@ Merge with existing memory — preserve seed/tend sections.
 ---
 
 {{/if}}
+## Run Report
+
+After completing all steps, write a JSON file to \`.gardener/run-report.json\`:
+
+\\\`\\\`\\\`json
+{
+  "version": 1,
+  "timestamp": "{ISO-8601 timestamp}",
+  "phases": [{
+    "phase": "nurture",
+    "started": true,
+    "features": [
+      { "feature": "{key}", "status": "executed|skipped|error", "counts": { ... }, "reason": "{if skipped/error}" }
+    ]
+  }],
+  "summary": "{1-2 sentence summary of what was done}",
+  "warnings": []
+}
+\\\`\\\`\\\`
+
+Report these features (only report enabled features listed here):
+{{#if features.memory}}- \`memory\` — counts: \`{ "read": 0|1, "updated": 0|1 }\`
+{{/if}}{{#if features.changelog}}- \`changelog\` — counts: \`{ "entries_written": 0|1 }\`
+{{/if}}{{#if features.persona}}- \`persona\` — counts: \`{ "applied": 0|1 }\`
+{{/if}}{{#if features.tag_normalization}}- \`tag_normalization\` — counts: \`{ "merge_suggestions": {n} }\`
+{{/if}}{{#if features.co_mention_network}}- \`co_mention_network\` — counts: \`{ "networks_updated": {n} }\`
+{{/if}}{{#if features.knowledge_gaps}}- \`knowledge_gaps\` — counts: \`{ "gaps_identified": {n} }\`
+{{/if}}{{#if features.entity_auto_linking}}- \`entity_auto_linking\` — counts: \`{ "mentions_linked": {n} }\`
+{{/if}}{{#if features.backlink_context}}- \`backlink_context\` — counts: \`{ "contexts_added": {n} }\`
+{{/if}}{{#if features.transitive_links}}- \`transitive_links\` — counts: \`{ "links_suggested": {n} }\`
+{{/if}}{{#if features.commitment_tracker}}- \`commitment_tracker\` — counts: \`{ "commitments_reviewed": {n}, "overdue": {n} }\`
+{{/if}}
+
+Also report core steps as features:
+- \`structural_integrity\` — counts: \`{ "orphans_moved": {n}, "duplicates_found": {n}, "broken_links_fixed": {n} }\`
+- \`frontmatter_sweep\` — counts: \`{ "notes_fixed": {n}, "fields_added": {n} }\`
+- \`consolidator\` — counts: \`{ "beliefs_consolidated": {n}, "contradictions": {n} }\`
+- \`playbook_builder\` — counts: \`{ "created": {n}, "updated": {n} }\`
+- \`auto_moc\` — counts: \`{ "created": {n}, "refreshed": {n} }\`
+- \`semantic_linking\` — counts: \`{ "links_added": {n} }\`
+
+**Rules:**
+- Report EVERY listed feature, even if skipped (use status "skipped" with a reason)
+- Write valid JSON — no trailing commas, no comments
+- If \`.gardener/run-report.json\` already exists (multi-phase run), read it first and APPEND your phase to the \`phases\` array
+
+---
+
 ## Output
 
 Summary:
@@ -1143,6 +1241,57 @@ This is the final phase — consolidate all memory sections into a clean file.
 ---
 
 {{/if}}
+## Run Report
+
+After completing all steps, write a JSON file to \`.gardener/run-report.json\`:
+
+\\\`\\\`\\\`json
+{
+  "version": 1,
+  "timestamp": "{ISO-8601 timestamp}",
+  "phases": [{
+    "phase": "tend",
+    "started": true,
+    "features": [
+      { "feature": "{key}", "status": "executed|skipped|error", "counts": { ... }, "reason": "{if skipped/error}" }
+    ]
+  }],
+  "summary": "{1-2 sentence summary of what was done}",
+  "warnings": []
+}
+\\\`\\\`\\\`
+
+Report these features (only report enabled features listed here):
+{{#if features.memory}}- \`memory\` — counts: \`{ "read": 0|1, "updated": 0|1 }\`
+{{/if}}{{#if features.changelog}}- \`changelog\` — counts: \`{ "entries_written": 0|1 }\`
+{{/if}}{{#if features.persona}}- \`persona\` — counts: \`{ "applied": 0|1 }\`
+{{/if}}{{#if features.social_content}}- \`social_content\` — counts: \`{ "drafts_generated": {n} }\`
+{{/if}}{{#if features.belief_trajectory}}- \`belief_trajectory\` — counts: \`{ "trajectories_tracked": {n} }\`
+{{/if}}{{#if features.theme_detection}}- \`theme_detection\` — counts: \`{ "themes_detected": {n} }\`
+{{/if}}{{#if features.attention_allocation}}- \`attention_allocation\` — counts: \`{ "allocations_tracked": {n} }\`
+{{/if}}{{#if features.goal_tracking}}- \`goal_tracking\` — counts: \`{ "goals_tracked": {n} }\`
+{{/if}}{{#if features.seasonal_patterns}}- \`seasonal_patterns\` — counts: \`{ "patterns_found": {n} }\`
+{{/if}}{{#if features.adaptive_batch_sizing}}- \`adaptive_batch_sizing\` — counts: \`{ "adjusted": 0|1 }\`
+{{/if}}{{#if features.enrichment_priority}}- \`enrichment_priority\` — counts: \`{ "candidates_scored": {n} }\`
+{{/if}}{{#if features.context_anchoring}}- \`context_anchoring\` — counts: \`{ "anchors_added": {n} }\`
+{{/if}}{{#if features.auto_summary}}- \`auto_summary\` — counts: \`{ "summaries_added": {n} }\`
+{{/if}}{{#if features.question_tracker}}- \`question_tracker\` — counts: \`{ "questions_resolved": {n}, "questions_open": {n} }\`
+{{/if}}{{#if features.commitment_tracker}}- \`commitment_tracker\` — counts: \`{ "commitments_reviewed": {n} }\`
+{{/if}}
+
+Also report core steps as features:
+- \`stale_review\` — counts: \`{ "flagged": {n}, "consolidated": {n} }\`
+- \`organizer\` — counts: \`{ "files_organized": {n} }\`
+- \`journal_generation\` — counts: \`{ "weekly": {n}, "monthly": {n}, "quarterly": {n} }\`
+- \`enrichment\` — counts: \`{ "notes_enriched": {n}, "remaining": {n} }\`
+
+**Rules:**
+- Report EVERY listed feature, even if skipped (use status "skipped" with a reason)
+- Write valid JSON — no trailing commas, no comments
+- If \`.gardener/run-report.json\` already exists (multi-phase run), read it first and APPEND your phase to the \`phases\` array
+
+---
+
 ## Output
 
 Summary:

@@ -465,7 +465,32 @@ The daemon has built-in resilience — exponential backoff on consecutive failur
 vault-gardener status
 ```
 
-Shows recent runs, vault health (total notes, inbox count, seed notes), inbox trend sparkline, and daemon status. Use `--json` for machine-readable output.
+Shows recent runs, vault health (total notes, inbox count, seed notes), inbox trend sparkline, daemon status, and **feature activity** from the latest run (which features executed, skipped, or errored with counts). Use `--json` for machine-readable output.
+
+## 📔 Gardening logs
+
+Each run produces a daily markdown log at `.gardener/logs/YYYY/YYYY-MM-DD.md`:
+
+```markdown
+# Gardening Log — 2026-02-22
+
+## 09:15 — Seed (claude/sonnet, 45s) ✓
+
+### Features
+| Feature | Status | Details |
+|---------|--------|---------|
+| memory | ✓ | 1 read, 1 updated |
+| question_tracker | ✓ | 3 questions extracted |
+| meeting_enhancement | – | skipped: no meetings found |
+
+### Vault Health
+- Notes: 2,847 → 2,850 (+3)
+- Inbox: 23 → 20 (-3)
+```
+
+Multiple runs in one day are appended as separate `## HH:MM` sections. The LLM writes structured JSON (`.gardener/run-report.json`); vault-gardener converts it to reliable markdown — the log format never depends on LLM formatting.
+
+JSON report archives are kept at `.gardener/reports/YYYY-MM-DD.json` for trend analysis.
 
 ## 🔒 Preflight checks
 
@@ -517,9 +542,14 @@ POSTs JSON on failure: phase, duration, exit code, reason, timestamp. No local p
 │   └── tend.md
 ├── metrics/
 │   └── YYYY-MM-DD.json      # Run metrics by day
+├── reports/
+│   └── YYYY-MM-DD.json      # Feature report archives by day
 ├── logs/
+│   ├── YYYY/
+│   │   └── YYYY-MM-DD.md    # Daily gardening logs (markdown)
 │   ├── gardener.log          # Structured JSON log (rotated)
 │   └── last-run-output.txt   # Last provider output (10KB cap)
+├── run-report.json           # Latest LLM feature report (overwritten each run)
 ├── queue.json                # Pending queued runs
 ├── .lock                     # PID lock (runtime only)
 ├── .lock-heartbeat           # Lock liveness proof
