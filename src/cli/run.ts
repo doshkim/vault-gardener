@@ -8,6 +8,7 @@ import {
   resolveModel,
   resolveTimeout,
 } from './config.js';
+import { renderAll } from '../prompts/render.js';
 import { acquireLock, acquireOrQueue, forceRelease } from '../lock/index.js';
 import type { LockHandle } from '../lock/index.js';
 import type { QueueEntry } from '../queue/index.js';
@@ -155,6 +156,9 @@ export async function runCommand(
   let exitCode = 0;
 
   try {
+    // Re-render prompts from config before each run
+    await renderAll(gardenerDir, config);
+
     // Pre-metrics
     const pre = await collectPreMetrics(cwd, config);
 
@@ -176,6 +180,7 @@ export async function runCommand(
       timeout,
       model,
       verbose: options.verbose,
+      gardenerDir,
     };
 
     const result = await provider.run(runOpts);

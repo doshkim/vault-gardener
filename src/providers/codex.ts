@@ -33,6 +33,7 @@ export function createCodexProvider(config?: Partial<ProviderConfig>): Provider 
         cwd: opts.cwd,
         timeout: opts.timeout || cfg.timeout,
         verbose: opts.verbose,
+        gardenerDir: opts.gardenerDir,
       });
     },
   };

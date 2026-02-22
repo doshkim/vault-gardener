@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.1.5] - 2026-02-22
+
+### Fixed
+- Output not saving: pass `gardenerDir` through `RunOptions` to all providers so `last-run-output.txt` is written
+- Memory not saving: call `renderAll()` before each run to ensure prompts are up-to-date with current config
+
 ## [0.1.4] - 2026-02-21
 
 ### Changed

@@ -15,6 +15,7 @@ export interface RunOptions {
   timeout: number;
   model: string;
   verbose?: boolean;
+  gardenerDir?: string;
 }
 
 export interface RunResult {

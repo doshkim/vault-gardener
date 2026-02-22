@@ -35,6 +35,7 @@ export function createClaudeProvider(config?: Partial<ProviderConfig>): Provider
         cwd: opts.cwd,
         timeout: opts.timeout || cfg.timeout,
         verbose: opts.verbose,
+        gardenerDir: opts.gardenerDir,
         // ANTHROPIC_API_KEY is on the env denylist (prevents leaking secrets to LLMs)
         // but Claude CLI needs it for authentication — pass it explicitly
         env: process.env.ANTHROPIC_API_KEY
