@@ -298,36 +298,29 @@ resilience:
 
 ### 🎛️ Feature flags
 
-Toggle individual features on or off. All default to `true`:
+All 23 features are **on by default**. You don't need a `features:` block in your config unless you want to disable something. Features not listed in your config default to `true` — new features added in future versions auto-enable on upgrade.
+
+To disable specific features, add only the ones you want off:
 
 ```yaml
+# Only list features you want to disable
 features:
-  memory: true
-  persona: true
-  changelog: true
-  question_tracker: true
-  commitment_tracker: true
-  this_time_last_year: true
-  meeting_enhancement: true
-  tag_normalization: true
-  co_mention_network: true
-  knowledge_gaps: true
-  entity_auto_linking: true
-  backlink_context: true
-  transitive_links: true
-  social_content: true
-  belief_trajectory: true
-  theme_detection: true
-  attention_allocation: true
-  goal_tracking: true
-  seasonal_patterns: true
-  adaptive_batch_sizing: true
-  enrichment_priority: true
-  context_anchoring: true
-  auto_summary: true
+  social_content: false
+  seasonal_patterns: false
 ```
 
-Set any feature to `false` to disable it. The core pipeline (triage, routing, structural integrity, consolidation, linking, enrichment) always runs.
+Available keys (all default to `true`):
+
+```
+memory, persona, changelog, question_tracker, commitment_tracker,
+this_time_last_year, meeting_enhancement, tag_normalization,
+co_mention_network, knowledge_gaps, entity_auto_linking,
+backlink_context, transitive_links, social_content, belief_trajectory,
+theme_detection, attention_allocation, goal_tracking, seasonal_patterns,
+adaptive_batch_sizing, enrichment_priority, context_anchoring, auto_summary
+```
+
+The core pipeline (triage, routing, structural integrity, consolidation, linking, enrichment) always runs regardless of feature flags.
 
 ## 📓 Journal system
 
