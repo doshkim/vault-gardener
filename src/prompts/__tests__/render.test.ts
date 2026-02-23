@@ -588,7 +588,7 @@ describe('Feature isolation', () => {
     expect(files.seed).toContain('Step 1 — Triage');
     expect(files.nurture).toContain('Nurture — Structure & Knowledge Building');
     expect(files.nurture).toContain('Structural Integrity');
-    expect(files.nurture).toContain('Consolidator');
+    expect(files.nurture).toContain('Belief Synthesizer');
     expect(files.tend).toContain('Tend — Lifecycle & Enrichment');
     expect(files.tend).toContain('Stale Note Review');
     expect(files.tend).toContain('Enrichment Actions');
