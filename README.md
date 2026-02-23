@@ -3,6 +3,7 @@
 <p align="center"><strong>Your vault is a garden. Stop weeding it by hand.</strong></p>
 
 <p align="center">
+  <a href="https://www.npmjs.com/package/vault-gardener"><img src="https://img.shields.io/npm/v/vault-gardener?style=for-the-badge" alt="npm"></a>
   <a href="https://github.com/doshkim/vault-gardener/releases"><img src="https://img.shields.io/github/v/release/doshkim/vault-gardener?style=for-the-badge" alt="GitHub release"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge" alt="MIT License"></a>
 </p>
@@ -64,13 +65,14 @@ vault-gardener ships with 23 features, all enabled by default. Every feature can
 ## Install
 
 ```bash
-bun add -g github:doshkim/vault-gardener
+npm install -g vault-gardener
 ```
 
-Or with npm:
+Or run directly without installing:
 
 ```bash
-npm install -g github:doshkim/vault-gardener
+npx vault-gardener init
+npx vault-gardener run
 ```
 
 ## Quick start
