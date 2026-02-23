@@ -511,7 +511,7 @@ modified in the last 5 minutes, SKIP it \u2014 the user may be actively editing.
 
 Run the full vault gardener. Three phases execute in sequence:
 1. **Seed** \u2014 process inbox into journals and semantic folders
-2. **Nurture** \u2014 repair structure, consolidate knowledge, build links
+2. **Nurture** \u2014 repair structure, synthesize knowledge, build links
 3. **Tend** \u2014 lifecycle management, organization, enrichment
 
 **No information is ever deleted** \u2014 only reorganized, enriched, and connected.
@@ -571,7 +571,7 @@ and append their phase to the \`phases\` array. The final file contains all thre
 
 Combined summary from all three phases:
 - **Seed**: Inbox items triaged, journals created, salience tags applied, items routed, questions extracted, commitments tracked
-- **Nurture**: Structure repaired, beliefs consolidated, playbooks/MOCs generated, entity + semantic + transitive links added, tags normalized, knowledge gaps identified, co-mention networks updated
+- **Nurture**: Structure repaired, beliefs synthesized, playbooks/MOCs generated, entity + semantic + transitive links added, tags normalized, knowledge gaps identified, co-mention networks updated
 - **Tend**: Stale notes reviewed, resources organized, notes enriched with context anchoring and summaries, journals generated with themes/attention/goals/social content`,
       // ---------------------------------------------------------------------------
       seed: `# Seed \u2014 Intake & Routing
@@ -921,7 +921,9 @@ Summary:
       // ---------------------------------------------------------------------------
       nurture: `# Nurture \u2014 Structure & Knowledge Building
 
-Repair structure, consolidate episodic memories into semantic knowledge, and build
+> **Phase name: nurture** \u2014 use exactly \`"nurture"\` in all reporting.
+
+Repair structure, synthesize episodic memories into semantic knowledge, and build
 the knowledge graph. Structural integrity first, then belief updates, playbook
 extraction, MOC generation, and semantic linking.
 
@@ -939,7 +941,7 @@ extraction, MOC generation, and semantic linking.
 ## Memory
 
 Read \`.gardener/memory.md\` if it exists. Use previous run context to:
-- Avoid re-processing already-consolidated beliefs
+- Avoid re-processing already-processed beliefs
 - Continue linking projects from where they left off
 - Prioritize areas flagged in previous runs
 
@@ -1011,7 +1013,7 @@ Identify notes with no incoming links (orphans).
 
 ---
 
-## Step 2 \u2014 Consolidator
+## Step 2 \u2014 Belief Synthesizer
 
 Scan all journals with \`## Store\` sections.
 
@@ -1025,9 +1027,10 @@ Scan all journals with \`## Store\` sections.
    - Explicitly hypothesis \u2192 \`\u{1F9EA} hypothesis\`
 4. Append bullet: \`- {marker} {belief} \u2014 evidence: [[Journal 1]], [[Journal 2]]\`
 5. **Contradiction check:** If conflicting belief found, mark both \`\u{1F7E1} emerging\` and add warning callout
-6. Mark Store checkbox as consolidated
+6. Mark Store checkbox as processed
 
 **Never delete beliefs.** Mark \`\u26D4 retracted\` when outdated.
+**Remember: this is the NURTURE phase \u2014 report as \`"phase": "nurture"\` in run-report.**
 
 **Batch limit:** Max {{limits.beliefs_per_run}} belief updates per run.
 
@@ -1191,7 +1194,7 @@ Append a human-readable summary of this nurture run to \`.gardener/changelog.md\
 \`\`\`markdown
 ### {YYYY-MM-DD HH:MM} \u2014 Nurture
 - {1-line summary of structural work}
-- Beliefs: {consolidated} consolidated, {contradictions} contradictions found
+- Beliefs: {synthesized} synthesized, {contradictions} contradictions found
 - Links: {count} new (entity: {entity}, semantic: {semantic}, transitive: {transitive})
 - Tags: {count} merge suggestions
 - Knowledge gaps: {count} identified
@@ -1209,7 +1212,7 @@ Update \`.gardener/memory.md\` with nurture phase results:
 
 \`\`\`markdown
 ## Nurture Phase
-- Consolidated {count} beliefs, {remaining} Store items remaining
+- Synthesized {count} beliefs, {remaining} Store items remaining
 - Added {count} links, {orphans} orphans still unlinked
 - Tag merge suggestions: {list}
 - {observations for next run}
@@ -1597,7 +1600,7 @@ Update \`.gardener/memory.md\` with tend phase results:
 - Last full run: {date}
 \`\`\`
 
-This is the final phase \u2014 consolidate all memory sections into a clean file.
+This is the final phase \u2014 merge all memory sections into a clean file.
 
 ---
 
