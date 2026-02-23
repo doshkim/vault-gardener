@@ -4113,9 +4113,9 @@ async function readLatestReport(gardenerDir) {
 }
 async function writeGardeningLog(gardenerDir, report, ctx) {
   const now = /* @__PURE__ */ new Date();
-  const date = now.toISOString().slice(0, 10);
+  const date = localDate(now);
   const year = date.slice(0, 4);
-  const time = now.toISOString().slice(11, 16);
+  const time = localTime(now);
   const logsDir = join12(gardenerDir, "logs", year);
   await mkdir7(logsDir, { recursive: true });
   const logPath = join12(logsDir, `${date}.md`);
@@ -4227,6 +4227,17 @@ function resolveModelName(config) {
   const providerConfig = config[config.provider];
   const key = config.tier === "power" ? "power_model" : "fast_model";
   return providerConfig?.[key] ?? config.tier;
+}
+function localDate(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+function localTime(d) {
+  const h = String(d.getHours()).padStart(2, "0");
+  const min = String(d.getMinutes()).padStart(2, "0");
+  return `${h}:${min}`;
 }
 
 // src/cli/run.ts
@@ -4817,7 +4828,7 @@ function printFeatureActivity(report) {
   const phases = report.phases;
   if (phases.length === 0) return;
   const phaseNames = phases.map((p) => p.phase).join(", ");
-  const time = report.timestamp.slice(11, 16);
+  const time = new Date(report.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
   console.log(chalk9.cyan(`
 Feature Activity (last run \u2014 ${phaseNames}, ${time})`));
   for (const phase of phases) {

@@ -156,7 +156,7 @@ function printFeatureActivity(report: ParsedReport): void {
   if (phases.length === 0) return;
 
   const phaseNames = phases.map((p) => p.phase).join(', ');
-  const time = report.timestamp.slice(11, 16);
+  const time = new Date(report.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
 
   console.log(chalk.cyan(`\nFeature Activity (last run — ${phaseNames}, ${time})`));
 

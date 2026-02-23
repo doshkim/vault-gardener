@@ -101,9 +101,9 @@ export async function writeGardeningLog(
   ctx: LogContext,
 ): Promise<void> {
   const now = new Date();
-  const date = now.toISOString().slice(0, 10);
+  const date = localDate(now);
   const year = date.slice(0, 4);
-  const time = now.toISOString().slice(11, 16);
+  const time = localTime(now);
 
   const logsDir = join(gardenerDir, 'logs', year);
   await mkdir(logsDir, { recursive: true });
@@ -249,4 +249,19 @@ function resolveModelName(config: GardenerConfig): string {
   const providerConfig = config[config.provider] as Record<string, unknown>;
   const key = config.tier === 'power' ? 'power_model' : 'fast_model';
   return (providerConfig?.[key] as string) ?? config.tier;
+}
+
+/** Format date as YYYY-MM-DD in local timezone. */
+function localDate(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+/** Format time as HH:MM in local timezone. */
+function localTime(d: Date): string {
+  const h = String(d.getHours()).padStart(2, '0');
+  const min = String(d.getMinutes()).padStart(2, '0');
+  return `${h}:${min}`;
 }
