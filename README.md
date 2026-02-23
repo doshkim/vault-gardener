@@ -10,7 +10,7 @@
 
 **vault-gardener** is an AI-powered maintenance pipeline for your markdown knowledge base. Point it at your vault, pick a provider (Claude, Codex, or Gemini), and let it do the grunt work — triaging your inbox, fixing broken links, building Maps of Content, writing journal summaries, and connecting ideas you forgot were related.
 
-It works with Obsidian, Logseq, Foam, Dendron, or literally any folder of `.md` files. No plugins, no lock-in.
+It works with Obsidian, Logseq, Foam, Dendron, or literally any folder of `.md` files. No plugins, no lock-in. I use this for my own Obsidian vaults.
 
 Three phases, inspired by actual gardening:
 
