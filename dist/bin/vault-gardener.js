@@ -677,17 +677,33 @@ Process episodic inbox items into journals.
 {{#if features.this_time_last_year}}
 ### This Time Last Year (#29)
 
-When creating or updating a daily journal, check for a journal from exactly 1 year ago
-(\`{{folders.journal}}/{YYYY-1}/{{journal.journal_subfolders.daily}}/{YYYY-1}-MM-DD.md\`).
+When creating or updating a daily journal, look for journals from roughly one year ago.
+Search \`{{folders.journal}}/{YYYY-1}/{{journal.journal_subfolders.daily}}/\` for any daily
+or event journals within \xB13 days of today's date last year (7-day window).
+
+**Search order** (pick the best single match):
+1. Exact date last year (\`{YYYY-1}-MM-DD\`)
+2. Same weekday in the nearest week (e.g., if today is Tuesday, find last year's nearest Tuesday)
+3. Any journal within the \xB13 day window, preferring the one with the most content
+
 If found, add a callout at the top of the daily note (after frontmatter):
 
 \`\`\`markdown
 > [!calendar] This Time Last Year
 > {2-3 sentence summary of that day's journal}
-> \u2014 [[{YYYY-1}-MM-DD]]
+> \u2014 [[{matched-date}]]
 \`\`\`
 
-Only add once per daily note. Skip if callout already exists.
+If multiple journals exist in the window (e.g., a daily + event journals), summarize the
+most interesting one and link to the others:
+
+\`\`\`markdown
+> [!calendar] This Time Last Year
+> {2-3 sentence summary of the most notable entry}
+> \u2014 [[{matched-date}]] \xB7 also: [[{YYYY-1}-MM-DD Kind - Title]]
+\`\`\`
+
+Only add once per daily note. Skip if a \`[!calendar] This Time Last Year\` callout already exists.
 
 {{/if}}
 ### LARGE captures (>= 50 words, OR has headings, OR contains [decision]/[milestone]/[insight])
