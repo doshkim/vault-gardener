@@ -886,6 +886,7 @@ Also report core steps as features:
 
 **Rules:**
 - Report EVERY listed feature, even if skipped (use status "skipped" with a reason)
+- The \`phase\` field MUST be exactly one of: \`"seed"\`, \`"nurture"\`, or \`"tend"\` \u2014 no other values
 - Write valid JSON \u2014 no trailing commas, no comments
 - If \`.gardener/run-report.json\` already exists (multi-phase run), read it first and APPEND your phase to the \`phases\` array
 
@@ -1247,6 +1248,7 @@ Also report core steps as features:
 
 **Rules:**
 - Report EVERY listed feature, even if skipped (use status "skipped" with a reason)
+- The \`phase\` field MUST be exactly one of: \`"seed"\`, \`"nurture"\`, or \`"tend"\` \u2014 no other values
 - Write valid JSON \u2014 no trailing commas, no comments
 - If \`.gardener/run-report.json\` already exists (multi-phase run), read it first and APPEND your phase to the \`phases\` array
 
@@ -1631,6 +1633,7 @@ Also report core steps as features:
 
 **Rules:**
 - Report EVERY listed feature, even if skipped (use status "skipped" with a reason)
+- The \`phase\` field MUST be exactly one of: \`"seed"\`, \`"nurture"\`, or \`"tend"\` \u2014 no other values
 - Write valid JSON \u2014 no trailing commas, no comments
 - If \`.gardener/run-report.json\` already exists (multi-phase run), read it first and APPEND your phase to the \`phases\` array
 
