@@ -1395,7 +1395,7 @@ mark resolved with link to the answering journal. Surface unresolved questions.
 **Additional monthly sections:**
 
 {{#if features.belief_trajectory}}
-\`## Belief Changes\` (#15 Belief Trajectory) \u2014 Review the Consolidator's recent work.
+\`## Belief Changes\` (#15 Belief Trajectory) \u2014 Review the Belief Synthesizer's recent work.
 Include only when there are recent belief changes:
 - Newly confirmed beliefs (with evidence links)
 - Emerging contradictions between beliefs
