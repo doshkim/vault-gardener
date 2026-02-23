@@ -210,7 +210,7 @@ var init_claude = __esm({
       power_model: "opus",
       fast_model: "sonnet",
       timeout: 600,
-      max_turns: 50
+      max_turns: 200
     };
   }
 });
@@ -1761,7 +1761,7 @@ function buildDefaultConfig(overrides = {}) {
       power_model: "opus",
       fast_model: "sonnet",
       timeout: 1500,
-      max_turns: 50
+      max_turns: 200
     },
     codex: {
       power_model: "gpt-5.3-codex",
@@ -4314,7 +4314,7 @@ vault-gardener run ${resolvedPhase} \u2014 ${config.provider}/${model}
   try {
     await renderAll(gardenerDir, config);
     const pre = await collectPreMetrics(cwd, config);
-    const provider = await loadProvider(config.provider);
+    const provider = await loadProvider(config.provider, config);
     const spinner = options.verbose ? null : ora({
       text: `Running ${resolvedPhase} phase...`,
       color: "green"
@@ -4432,19 +4432,20 @@ exitCode: ${exitCode}
   }
   if (exitCode !== 0) process.exit(1);
 }
-async function loadProvider(name) {
+async function loadProvider(name, config) {
+  const providerConfig = config[name];
   switch (name) {
     case "claude": {
       const { createClaudeProvider: createClaudeProvider2 } = await Promise.resolve().then(() => (init_claude(), claude_exports));
-      return createClaudeProvider2();
+      return createClaudeProvider2(providerConfig);
     }
     case "codex": {
       const { createCodexProvider: createCodexProvider2 } = await Promise.resolve().then(() => (init_codex(), codex_exports));
-      return createCodexProvider2();
+      return createCodexProvider2(providerConfig);
     }
     case "gemini": {
       const { createGeminiProvider: createGeminiProvider2 } = await Promise.resolve().then(() => (init_gemini(), gemini_exports));
-      return createGeminiProvider2();
+      return createGeminiProvider2(providerConfig);
     }
     default:
       throw new Error(`Unknown provider: ${name}`);

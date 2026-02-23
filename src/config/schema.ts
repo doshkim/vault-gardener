@@ -284,7 +284,7 @@ export function buildDefaultConfig(overrides: Partial<GardenerConfig> = {}): Gar
       power_model: 'opus',
       fast_model: 'sonnet',
       timeout: 1500,
-      max_turns: 50,
+      max_turns: 200,
     },
     codex: {
       power_model: 'gpt-5.3-codex',

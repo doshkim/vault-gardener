@@ -5,7 +5,7 @@ const DEFAULT_CONFIG: ProviderConfig = {
   power_model: 'opus',
   fast_model: 'sonnet',
   timeout: 600,
-  max_turns: 50,
+  max_turns: 200,
 };
 
 export function createClaudeProvider(config?: Partial<ProviderConfig>): Provider {

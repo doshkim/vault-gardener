@@ -20,6 +20,7 @@ import { formatSummary } from '../metrics/format.js';
 import { parseRunReport, archiveReport, writeGardeningLog } from '../reports/index.js';
 import type { ParsedReport } from '../reports/index.js';
 import type { ProviderName, Tier, RunOptions } from '../providers/types.js';
+import type { GardenerConfig } from '../config/index.js';
 import type { RunMetrics } from '../metrics/collector.js';
 
 type Phase = 'seed' | 'nurture' | 'tend' | 'all';
@@ -165,7 +166,7 @@ export async function runCommand(
     const pre = await collectPreMetrics(cwd, config);
 
     // Load provider
-    const provider = await loadProvider(config.provider);
+    const provider = await loadProvider(config.provider, config);
 
     const spinner = options.verbose
       ? null
@@ -300,19 +301,20 @@ export async function runCommand(
   if (exitCode !== 0) process.exit(1);
 }
 
-async function loadProvider(name: ProviderName) {
+async function loadProvider(name: ProviderName, config: GardenerConfig) {
+  const providerConfig = config[name] as Record<string, unknown>;
   switch (name) {
     case 'claude': {
       const { createClaudeProvider } = await import('../providers/claude.js');
-      return createClaudeProvider();
+      return createClaudeProvider(providerConfig);
     }
     case 'codex': {
       const { createCodexProvider } = await import('../providers/codex.js');
-      return createCodexProvider();
+      return createCodexProvider(providerConfig);
     }
     case 'gemini': {
       const { createGeminiProvider } = await import('../providers/gemini.js');
-      return createGeminiProvider();
+      return createGeminiProvider(providerConfig);
     }
     default:
       throw new Error(`Unknown provider: ${name}`);
