@@ -1,8 +1,15 @@
-import { readFile, writeFile, readdir, mkdir, stat, rename } from 'node:fs/promises';
+import { readFile, readdir, stat } from 'node:fs/promises';
 import { join, extname } from 'node:path';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { performance } from 'node:perf_hooks';
+import {
+  walkMarkdownFiles,
+  appendJsonArrayFile,
+  readJsonArrayDir,
+  matchesInHead,
+} from '../utils/fs.js';
+import type { WalkOptions } from '../utils/fs.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -43,74 +50,12 @@ export interface RunMetrics {
   };
 }
 
-export interface WalkOptions {
-  maxFiles?: number;
-  timeout?: number;
-}
+export type { WalkOptions, WalkResult } from '../utils/fs.js';
 
-export interface WalkResult {
-  files: string[];
-  approximate: boolean;
-  timedOut: boolean;
-}
-
-const SKIP_DIRS = new Set(['.git', '.obsidian', '.gardener', 'node_modules', '.trash']);
-const DEFAULT_MAX_FILES = 50_000;
 const MAX_FILE_SIZE = 1_048_576; // 1 MB
-const COUNT_LINKS_TIMEOUT_MS = 30_000; // 30 seconds
+const COUNT_LINKS_TIMEOUT_MS = 30_000;
 const BATCH_SIZE = 100;
-const SEED_DETECTION_TIMEOUT_MS = 30_000; // 30 seconds
-
-/** Recursively walk a directory and collect .md file paths. */
-async function walkMd(dir: string, opts?: WalkOptions): Promise<WalkResult> {
-  const maxFiles = opts?.maxFiles ?? DEFAULT_MAX_FILES;
-  const timeoutMs = opts?.timeout;
-  const startTime = timeoutMs != null ? performance.now() : 0;
-  const results: string[] = [];
-  let approximate = false;
-  let timedOut = false;
-
-  async function walk(d: string): Promise<void> {
-    if (approximate || timedOut) return;
-
-    if (timeoutMs != null && performance.now() - startTime > timeoutMs) {
-      timedOut = true;
-      approximate = true;
-      return;
-    }
-
-    let entries;
-    try {
-      entries = await readdir(d, { withFileTypes: true });
-    } catch {
-      return; // individual dir failure doesn't kill walk
-    }
-
-    for (const entry of entries) {
-      if (approximate || timedOut) return;
-
-      if (entry.name.startsWith('.') || SKIP_DIRS.has(entry.name)) continue;
-
-      // Skip symlinks
-      if (entry.isSymbolicLink()) continue;
-
-      const full = join(d, entry.name);
-
-      if (entry.isDirectory()) {
-        await walk(full);
-      } else if (entry.isFile() && extname(entry.name) === '.md') {
-        results.push(full);
-        if (results.length >= maxFiles) {
-          approximate = true;
-          return;
-        }
-      }
-    }
-  }
-
-  await walk(dir);
-  return { files: results, approximate, timedOut };
-}
+const SEED_DETECTION_TIMEOUT_MS = 30_000;
 
 /** Count .md files in a single directory (non-recursive). */
 export async function countInbox(dir: string): Promise<number> {
@@ -119,20 +64,6 @@ export async function countInbox(dir: string): Promise<number> {
     return entries.filter((e) => e.isFile() && extname(e.name) === '.md').length;
   } catch {
     return 0;
-  }
-}
-
-/** Check if the first N lines of a file contain a pattern. */
-async function matchesInHead(filePath: string, pattern: string, lines: number): Promise<boolean> {
-  try {
-    const info = await stat(filePath);
-    if (info.size > MAX_FILE_SIZE) return false;
-
-    const content = await readFile(filePath, 'utf-8');
-    const head = content.split('\n').slice(0, lines).join('\n');
-    return head.includes(pattern);
-  } catch {
-    return false;
   }
 }
 
@@ -204,7 +135,7 @@ export async function collectPreMetrics(
   opts?: WalkOptions,
 ): Promise<PreMetrics> {
   const inboxDir = join(vaultPath, config.folders.inbox ?? '00-inbox');
-  const walkResult = await walkMd(vaultPath, opts);
+  const walkResult = await walkMarkdownFiles(vaultPath, opts);
 
   const seedCount = await countSeeds(walkResult.files);
   const linkCount = await countLinks(walkResult.files);
@@ -225,7 +156,7 @@ export async function collectPostMetrics(
   opts?: WalkOptions,
 ): Promise<PostMetrics> {
   const inboxDir = join(vaultPath, config.folders.inbox ?? '00-inbox');
-  const walkResult = await walkMd(vaultPath, opts);
+  const walkResult = await walkMarkdownFiles(vaultPath, opts);
 
   const seedCount = await countSeeds(walkResult.files);
   const linkCount = await countLinks(walkResult.files);
@@ -245,61 +176,12 @@ export async function collectPostMetrics(
 }
 
 export async function writeMetrics(gardenerDir: string, metrics: RunMetrics): Promise<void> {
-  const metricsDir = join(gardenerDir, 'metrics');
-  await mkdir(metricsDir, { recursive: true });
-
-  const filename = `${metrics.date}.json`;
-  const filePath = join(metricsDir, filename);
-
-  let runs: RunMetrics[] = [];
-
-  try {
-    const raw = await readFile(filePath, 'utf-8');
-    const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed)) {
-      runs = parsed as RunMetrics[];
-    }
-  } catch {
-    // file doesn't exist or corrupt JSON — start fresh
-  }
-
-  runs.push(metrics);
-
-  // Atomic write: write to tmp, then rename
-  const tmpFile = filePath + '.tmp';
-  await writeFile(tmpFile, JSON.stringify(runs, null, 2), 'utf-8');
-  await rename(tmpFile, filePath);
+  const filePath = join(gardenerDir, 'metrics', `${metrics.date}.json`);
+  await appendJsonArrayFile(filePath, metrics);
 }
 
 export async function readMetrics(gardenerDir: string, days?: number): Promise<RunMetrics[]> {
   const metricsDir = join(gardenerDir, 'metrics');
-  let files: string[];
-
-  try {
-    const entries = await readdir(metricsDir);
-    files = entries.filter((f) => f.endsWith('.json')).sort();
-  } catch {
-    return [];
-  }
-
-  if (days && days > 0) {
-    const cutoff = new Date();
-    cutoff.setDate(cutoff.getDate() - days);
-    const cutoffStr = cutoff.toISOString().slice(0, 10);
-    files = files.filter((f) => f.replace('.json', '') >= cutoffStr);
-  }
-
-  const allRuns: RunMetrics[] = [];
-
-  for (const file of files) {
-    try {
-      const raw = await readFile(join(metricsDir, file), 'utf-8');
-      const runs = JSON.parse(raw) as RunMetrics[];
-      allRuns.push(...runs);
-    } catch {
-      // skip corrupted files
-    }
-  }
-
-  return allRuns.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+  const runs = await readJsonArrayDir<RunMetrics>(metricsDir, days);
+  return runs.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
 }

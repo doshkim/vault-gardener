@@ -4,6 +4,7 @@ import { execFileSync } from 'node:child_process';
 import { performance } from 'node:perf_hooks';
 import type { Logger } from '../logging/index.js';
 import type { GardenerConfig } from '../config/index.js';
+import { SKIP_DIRS } from '../constants.js';
 
 export interface PreflightResult {
   ok: boolean;
@@ -13,7 +14,6 @@ export interface PreflightResult {
 
 const SYNC_CONFLICT_MAX_FILES = 10_000;
 const SYNC_CONFLICT_TIMEOUT_MS = 5_000;
-const SKIP_DIRS = new Set(['.git', '.obsidian', '.gardener', 'node_modules', '.trash']);
 
 function result(): PreflightResult {
   return { ok: true, errors: [], warnings: [] };

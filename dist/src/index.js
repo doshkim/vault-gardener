@@ -8,10 +8,142 @@ var __export = (target, all) => {
     __defProp(target, name, { get: all[name], enumerable: true });
 };
 
+// src/constants.ts
+var SKIP_DIRS;
+var init_constants = __esm({
+  "src/constants.ts"() {
+    "use strict";
+    SKIP_DIRS = /* @__PURE__ */ new Set([
+      ".git",
+      ".obsidian",
+      ".logseq",
+      ".foam",
+      ".gardener",
+      ".trash",
+      "node_modules"
+    ]);
+  }
+});
+
+// src/utils/fs.ts
+import { readFile, writeFile, readdir, mkdir, rename, stat } from "fs/promises";
+import { join, extname } from "path";
+import { performance } from "perf_hooks";
+async function walkMarkdownFiles(dir, opts) {
+  const maxFiles = opts?.maxFiles ?? DEFAULT_MAX_FILES;
+  const timeoutMs = opts?.timeout;
+  const startTime = timeoutMs != null ? performance.now() : 0;
+  const results = [];
+  let approximate = false;
+  let timedOut = false;
+  async function walk(d) {
+    if (approximate || timedOut) return;
+    if (timeoutMs != null && performance.now() - startTime > timeoutMs) {
+      timedOut = true;
+      approximate = true;
+      return;
+    }
+    let entries;
+    try {
+      entries = await readdir(d, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const entry of entries) {
+      if (approximate || timedOut) return;
+      if (entry.name.startsWith(".") || SKIP_DIRS.has(entry.name)) continue;
+      if (entry.isSymbolicLink()) continue;
+      const full = join(d, entry.name);
+      if (entry.isDirectory()) {
+        await walk(full);
+      } else if (entry.isFile() && extname(entry.name) === ".md") {
+        results.push(full);
+        if (results.length >= maxFiles) {
+          approximate = true;
+          return;
+        }
+      }
+    }
+  }
+  await walk(dir);
+  return { files: results, approximate, timedOut };
+}
+async function appendJsonArrayFile(filePath, item) {
+  const dir = join(filePath, "..");
+  await mkdir(dir, { recursive: true });
+  let existing = [];
+  try {
+    const raw = await readFile(filePath, "utf-8");
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) existing = parsed;
+  } catch {
+  }
+  existing.push(item);
+  const tmpFile = filePath + ".tmp";
+  await writeFile(tmpFile, JSON.stringify(existing, null, 2), "utf-8");
+  await rename(tmpFile, filePath);
+}
+async function readJsonArrayDir(dir, days) {
+  let files;
+  try {
+    const entries = await readdir(dir);
+    files = entries.filter((f) => f.endsWith(".json")).sort();
+  } catch {
+    return [];
+  }
+  if (days && days > 0) {
+    const cutoff = /* @__PURE__ */ new Date();
+    cutoff.setDate(cutoff.getDate() - days);
+    const cutoffStr = cutoff.toISOString().slice(0, 10);
+    files = files.filter((f) => f.replace(".json", "") >= cutoffStr);
+  }
+  const all = [];
+  for (const file of files) {
+    try {
+      const raw = await readFile(join(dir, file), "utf-8");
+      const items = JSON.parse(raw);
+      all.push(...items);
+    } catch {
+    }
+  }
+  return all;
+}
+function localDate(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+function localTime(d) {
+  const h = String(d.getHours()).padStart(2, "0");
+  const min = String(d.getMinutes()).padStart(2, "0");
+  return `${h}:${min}`;
+}
+async function matchesInHead(filePath, pattern, lines) {
+  try {
+    const info = await stat(filePath);
+    if (info.size > MAX_FILE_SIZE) return false;
+    const content = await readFile(filePath, "utf-8");
+    const head = content.split("\n").slice(0, lines).join("\n");
+    return head.includes(pattern);
+  } catch {
+    return false;
+  }
+}
+var DEFAULT_MAX_FILES, MAX_FILE_SIZE;
+var init_fs = __esm({
+  "src/utils/fs.ts"() {
+    "use strict";
+    init_constants();
+    DEFAULT_MAX_FILES = 5e4;
+    MAX_FILE_SIZE = 1048576;
+  }
+});
+
 // src/providers/spawn.ts
 import { spawn } from "child_process";
-import { writeFile, mkdir } from "fs/promises";
-import { join as join2 } from "path";
+import { writeFile as writeFile2, mkdir as mkdir2 } from "fs/promises";
+import { join as join3 } from "path";
 function mapExitCode(code, signal) {
   if (signal) return `Signal: ${signal}`;
   if (code != null && code in EXIT_CODE_MAP) return EXIT_CODE_MAP[code];
@@ -95,9 +227,9 @@ async function spawnProvider(command, args, opts) {
       };
       if (opts.gardenerDir && outputBuf.length > 0) {
         try {
-          const logsDir = join2(opts.gardenerDir, "logs");
-          await mkdir(logsDir, { recursive: true });
-          await writeFile(join2(logsDir, "last-run-output.txt"), outputBuf.slice(-MAX_OUTPUT_BYTES), "utf-8");
+          const logsDir = join3(opts.gardenerDir, "logs");
+          await mkdir2(logsDir, { recursive: true });
+          await writeFile2(join3(logsDir, "last-run-output.txt"), outputBuf.slice(-MAX_OUTPUT_BYTES), "utf-8");
         } catch {
         }
       }
@@ -269,7 +401,7 @@ var gemini_exports = {};
 __export(gemini_exports, {
   createGeminiProvider: () => createGeminiProvider
 });
-import { readFile } from "fs/promises";
+import { readFile as readFile2 } from "fs/promises";
 function createGeminiProvider(config) {
   const cfg = { ...DEFAULT_CONFIG3, ...config };
   return {
@@ -278,7 +410,7 @@ function createGeminiProvider(config) {
       return isCommandAvailable("gemini");
     },
     async run(opts) {
-      const contextContent = await readFile(opts.contextFile, "utf-8");
+      const contextContent = await readFile2(opts.contextFile, "utf-8");
       const prompt = `Read ${opts.promptFile} and execute all steps.`;
       const args = [
         "-m",
@@ -317,8 +449,8 @@ __export(render_exports, {
   renderPrompts: () => renderPrompts
 });
 import Handlebars from "handlebars";
-import { writeFile as writeFile2, mkdir as mkdir2 } from "fs/promises";
-import { join as join3 } from "path";
+import { writeFile as writeFile3, mkdir as mkdir3 } from "fs/promises";
+import { join as join4 } from "path";
 function getTemplate(name) {
   const template = TEMPLATES[name];
   if (!template) {
@@ -336,21 +468,21 @@ function compile(name) {
   return fn;
 }
 async function renderPrompts(gardenerDir, config) {
-  const promptsDir = join3(gardenerDir, "prompts");
-  await mkdir2(promptsDir, { recursive: true });
+  const promptsDir = join4(gardenerDir, "prompts");
+  await mkdir3(promptsDir, { recursive: true });
   await Promise.all(
     PHASE_NAMES.map(async (name) => {
       const render = compile(name);
       const output = render(config);
-      await writeFile2(join3(promptsDir, `${name}.md`), output, "utf-8");
+      await writeFile3(join4(promptsDir, `${name}.md`), output, "utf-8");
     })
   );
 }
 async function renderContext(gardenerDir, config) {
-  await mkdir2(gardenerDir, { recursive: true });
+  await mkdir3(gardenerDir, { recursive: true });
   const render = compile("context");
   const output = render(config);
-  await writeFile2(join3(gardenerDir, "context.md"), output, "utf-8");
+  await writeFile3(join4(gardenerDir, "context.md"), output, "utf-8");
 }
 async function renderAll(gardenerDir, config) {
   await Promise.all([
@@ -358,11 +490,24 @@ async function renderAll(gardenerDir, config) {
     renderPrompts(gardenerDir, config)
   ]);
 }
-var TEMPLATES, compiled, PHASE_NAMES;
+var PERSONA_BLOCK, SAFETY_BLOCK, TEMPLATES, compiled, PHASE_NAMES;
 var init_render = __esm({
   "src/prompts/render.ts"() {
     "use strict";
     Handlebars.registerHelper("eq", (a, b) => a === b);
+    PERSONA_BLOCK = `{{#if features.persona}}
+## Persona
+
+{{#if (eq persona "analytical")}}You are an **analytical** gardener. Focus on facts, data, and minimal interpretation. Be precise, structured, and evidence-based. Avoid speculation.{{/if}}
+{{#if (eq persona "reflective")}}You are a **reflective** gardener. Ask questions, explore deeper meaning, and surface connections. Balance structure with thoughtful commentary.{{/if}}
+{{#if (eq persona "coach")}}You are a **coaching** gardener. Be prescriptive and action-oriented. Frame observations as recommendations. Push for clarity and commitment.{{/if}}
+
+{{/if}}`;
+    SAFETY_BLOCK = `## Safety
+
+- **Never delete** \u2014 only reorganize, enrich, connect
+- **Skip recently modified** \u2014 if file modified in last 5 min, skip it
+- **Never touch protected paths**: {{#each protected}}\`{{this}}/\` {{/each}}`;
     TEMPLATES = {
       context: `# Vault Context (Auto-Generated)
 
@@ -516,14 +661,7 @@ Run the full vault gardener. Three phases execute in sequence:
 
 **No information is ever deleted** \u2014 only reorganized, enriched, and connected.
 
-{{#if features.persona}}
-## Persona
-
-{{#if (eq persona "analytical")}}You are an **analytical** gardener. Focus on facts, data, and minimal interpretation. Be precise, structured, and evidence-based. Avoid speculation.{{/if}}
-{{#if (eq persona "reflective")}}You are a **reflective** gardener. Ask questions, explore deeper meaning, and surface connections. Balance structure with thoughtful commentary.{{/if}}
-{{#if (eq persona "coach")}}You are a **coaching** gardener. Be prescriptive and action-oriented. Frame observations as recommendations. Push for clarity and commitment.{{/if}}
-
-{{/if}}
+${PERSONA_BLOCK}
 {{#if features.memory}}
 ## Memory
 
@@ -581,14 +719,7 @@ structured episodic and semantic memories.
 
 **No information is ever deleted** \u2014 only reorganized, enriched, and connected.
 
-{{#if features.persona}}
-## Persona
-
-{{#if (eq persona "analytical")}}You are an **analytical** gardener. Focus on facts, data, and minimal interpretation. Be precise, structured, and evidence-based. Avoid speculation.{{/if}}
-{{#if (eq persona "reflective")}}You are a **reflective** gardener. Ask questions, explore deeper meaning, and surface connections. Balance structure with thoughtful commentary.{{/if}}
-{{#if (eq persona "coach")}}You are a **coaching** gardener. Be prescriptive and action-oriented. Frame observations as recommendations. Push for clarity and commitment.{{/if}}
-
-{{/if}}
+${PERSONA_BLOCK}
 {{#if features.memory}}
 ## Memory
 
@@ -599,11 +730,7 @@ what was done, what was deferred, running observations about vault state. Use th
 - Make strategic decisions about what to prioritize this run
 
 {{/if}}
-## Safety
-
-- **Never delete** \u2014 only reorganize, enrich, connect
-- **Skip recently modified** \u2014 if file modified in last 5 min, skip it
-- **Never touch protected paths**: {{#each protected}}\`{{this}}/\` {{/each}}
+${SAFETY_BLOCK}
 
 ## Instructions
 
@@ -737,6 +864,7 @@ Only add once per daily note. Skip if a \`[!calendar] This Time Last Year\` call
 
    **Encounter (type: meeting):**
    - Add \`## Action Items\` with checkboxes: \`- [ ] {action} \u2014 @{owner} (due: {date})\`
+   - **Dedup:** Before creating any \`- [ ]\` action item, check this week's daily journals AND the current weekly journal for matching items (same text or same \`from [[...]]\` origin). Skip creation if a match exists.
    - Add \`## Key Quotes\` attributed to attendees
    - Add \`## Follow-up Required\` with timeline
    - Link to relevant \`{{folders.people}}/\` and \`{{folders.orgs}}/\` notes
@@ -763,6 +891,7 @@ Only add once per daily note. Skip if a \`[!calendar] This Time Last Year\` call
    \`\`\`
    **Important:** Check the person note's existing commitments and open todo lists in the vault
    to avoid duplicating items already tracked elsewhere.
+   **Dedup:** Before creating any \`- [ ]\` commitment, check this week's daily journals AND the current weekly journal for matching items (same text or same \`from [[...]]\` origin). Skip creation if a match exists.
 
 {{/if}}
 7. **Link from daily note** under \`## Events\`
@@ -929,14 +1058,7 @@ extraction, MOC generation, and semantic linking.
 
 **No information is ever deleted** \u2014 only reorganized, enriched, and connected.
 
-{{#if features.persona}}
-## Persona
-
-{{#if (eq persona "analytical")}}You are an **analytical** gardener. Focus on facts, data, and minimal interpretation. Be precise, structured, and evidence-based. Avoid speculation.{{/if}}
-{{#if (eq persona "reflective")}}You are a **reflective** gardener. Ask questions, explore deeper meaning, and surface connections. Balance structure with thoughtful commentary.{{/if}}
-{{#if (eq persona "coach")}}You are a **coaching** gardener. Be prescriptive and action-oriented. Frame observations as recommendations. Push for clarity and commitment.{{/if}}
-
-{{/if}}
+${PERSONA_BLOCK}
 {{#if features.memory}}
 ## Memory
 
@@ -946,11 +1068,7 @@ Read \`.gardener/memory.md\` if it exists. Use previous run context to:
 - Prioritize areas flagged in previous runs
 
 {{/if}}
-## Safety
-
-- **Never delete** \u2014 only reorganize, enrich, connect
-- **Skip recently modified** \u2014 if file modified in last 5 min, skip it
-- **Never touch protected paths**: {{#each protected}}\`{{this}}/\` {{/each}}
+${SAFETY_BLOCK}
 
 ## Instructions
 
@@ -1294,14 +1412,7 @@ enrich sparse notes. Pruning, organizing, and nurturing the knowledge garden.
 
 **No information is ever deleted** \u2014 only reorganized, enriched, and connected.
 
-{{#if features.persona}}
-## Persona
-
-{{#if (eq persona "analytical")}}You are an **analytical** gardener. Focus on facts, data, and minimal interpretation. Be precise, structured, and evidence-based. Avoid speculation.{{/if}}
-{{#if (eq persona "reflective")}}You are a **reflective** gardener. Ask questions, explore deeper meaning, and surface connections. Balance structure with thoughtful commentary.{{/if}}
-{{#if (eq persona "coach")}}You are a **coaching** gardener. Be prescriptive and action-oriented. Frame observations as recommendations. Push for clarity and commitment.{{/if}}
-
-{{/if}}
+${PERSONA_BLOCK}
 {{#if features.memory}}
 ## Memory
 
@@ -1311,11 +1422,7 @@ Read \`.gardener/memory.md\` if it exists. Use previous run context to:
 - Track enrichment queue progress across runs
 
 {{/if}}
-## Safety
-
-- **Never delete** \u2014 only reorganize, enrich, connect
-- **Skip recently modified** \u2014 if file modified in last 5 min, skip it
-- **Never touch protected paths**: {{#each protected}}\`{{this}}/\` {{/each}}
+${SAFETY_BLOCK}
 
 ## Instructions
 
@@ -1355,6 +1462,71 @@ New topic categories auto-created when {{auto_grow.resources}}+ notes share keyw
 
 **Batch limit:** Max {{limits.organize_per_run}} files organized per run.
 
+{{#if features.todo_lifecycle}}
+---
+
+## Step 1.5 \u2014 Todo Lifecycle Management
+
+Manage the lifecycle of \`- [ ]\` action items across daily, weekly, and monthly journals.
+One canonical checkbox per todo at any time \u2014 items carry forward with gentle accountability.
+
+**Scope:** Only \`- [ ]\` items in daily journal body text and \`## Action Items\` sections of event journals (meetings).
+**Excluded:** Items inside \`## Store\`, \`## Commitments\`, \`## Open Questions\`, or \`## Goals\` sections (these have their own lifecycle systems).
+
+### 1.5.1 \u2014 Reconciliation Sweep
+
+Read memory's \`## Todo Lifecycle\` section (if it exists). For each tracked forward:
+1. Check the origin file \u2014 if it now shows \`- [x]\` (user re-added checkbox and completed), mark resolved
+2. Check the destination file \u2014 if it shows \`- [x]\`, mark resolved
+3. Update memory: move resolved items from \`### Active Forwards\` to \`### Recently Resolved\`
+
+### 1.5.2 \u2014 Forward from Dailies
+
+Scan daily and event journals from completed weeks. For each in-scope \`- [ ]\` item:
+
+**Dated items (have \`due: YYYY-MM-DD\`):**
+- If 3+ days past due \u2192 forward to weekly
+
+**Undated items:**
+- If the item's week has ended \u2192 forward to weekly
+
+**Forwarding action:**
+1. In the origin file: remove the checkbox, add italic forwarding note:
+   \`- Send requirements to Jane \u2014 *carried forward to [[YYYY-WNN]]*\`
+2. In the weekly's \`## Carrying Forward\` section, add:
+   \`- [ ] Send requirements to Jane \u2014 from [[origin-date]] (due: YYYY-MM-DD)\`
+
+**Deduplication:** Before adding to any destination, check for an existing item with the same \`from [[...]]\` origin. If found, update the week counter instead of duplicating.
+
+### 1.5.3 \u2014 Weekly-to-Weekly Forwarding
+
+For each \`- [ ]\` item in the previous weekly's \`## Carrying Forward\` section:
+1. In the old weekly: remove the checkbox, add forwarding note:
+   \`- Send requirements to Jane \u2014 *carried forward to [[YYYY-WNN]]*\`
+2. In the new weekly's \`## Carrying Forward\`, add with incremented week counter:
+   \`- [ ] Send requirements to Jane \u2014 from [[origin-date]] (due: YYYY-MM-DD, week N)\`
+
+### 1.5.4 \u2014 Staleness Escalation
+
+{{#if (eq persona "analytical")}}Tone: Terse. State facts: "Carrying forward: 3 items. Oldest: 2 weeks."{{/if}}
+{{#if (eq persona "reflective")}}Tone: Thoughtful. "Three items have been traveling with you. Worth asking: which still matter?"{{/if}}
+{{#if (eq persona "coach")}}Tone: Prescriptive. "3 items carrying forward. Recommend blocking time for the oldest two."{{/if}}
+
+| Week Count | Action |
+|-----------|--------|
+| week 3 | Add \`> [!question] Still relevant? This item has been carrying forward for 3 weeks.\` callout above the item |
+| week 4 | Remove from weekly. Add to monthly journal's \`## Long-Running Items\` section |
+| week 6 | Strikethrough in monthly: \`- ~~Send requirements to Jane~~ \u2014 dropped after 6 weeks (from [[origin-date]])\`. Remove from memory |
+
+{{#if features.commitment_tracker}}
+### Commitment Cross-Reference
+
+When both \`todo_lifecycle\` and \`commitment_tracker\` are enabled, add an \`> [!info] Commitment check\` callout in the weekly listing overdue commitments from person notes \u2014 summary only, no duplicate checkboxes.
+{{/if}}
+
+**Batch limit:** Max 20 todo lifecycle operations per run.
+
+{{/if}}
 ---
 
 ## Step 2 \u2014 Journal Generation
@@ -1365,7 +1537,7 @@ Generate higher-level journal summaries when threshold data exists.
 - **Trigger**: 3+ daily entries exist for the week
 - **Location**: \`{{folders.journal}}/YYYY/{{journal.journal_subfolders.weekly}}/YYYY-WNN.md\`
 - **Style**: {{journal.style.weekly}}
-- **Sections**: Highlights, Decisions, Learnings, People, Open Items for Next Week
+- **Sections**: Highlights, Decisions, Learnings, People, {{#if features.todo_lifecycle}}Carrying Forward{{else}}Open Items for Next Week{{/if}}
 - **Links**: Back-links to each daily + event journal
 
 **Additional weekly sections:**
@@ -1600,6 +1772,25 @@ Update \`.gardener/memory.md\` with tend phase results:
 - Last full run: {date}
 \`\`\`
 
+{{#if features.todo_lifecycle}}
+Also update the \`## Todo Lifecycle\` section in memory:
+
+\`\`\`markdown
+## Todo Lifecycle
+### Active Forwards
+| Item | Origin | Current Location | Due | Week |
+|------|--------|-----------------|-----|------|
+| {item text} | [[{origin-date}]] | [[{weekly/monthly}]] | {due-date or \u2014} | {N} |
+
+### Recently Resolved
+| Item | Origin | Resolved In | Resolved Date |
+|------|--------|------------|---------------|
+| {item text} | [[{origin-date}]] | [[{location}]] | {date} |
+\`\`\`
+
+Prune \`### Recently Resolved\` entries older than 2 weeks.
+{{/if}}
+
 This is the final phase \u2014 merge all memory sections into a clean file.
 
 ---
@@ -1641,6 +1832,7 @@ Report these features (only report enabled features listed here):
 {{/if}}{{#if features.auto_summary}}- \`auto_summary\` \u2014 counts: \`{ "summaries_added": {n} }\`
 {{/if}}{{#if features.question_tracker}}- \`question_tracker\` \u2014 counts: \`{ "questions_resolved": {n}, "questions_open": {n} }\`
 {{/if}}{{#if features.commitment_tracker}}- \`commitment_tracker\` \u2014 counts: \`{ "commitments_reviewed": {n} }\`
+{{/if}}{{#if features.todo_lifecycle}}- \`todo_lifecycle\` \u2014 counts: \`{ "forwarded": {n}, "resolved": {n}, "nudged": {n}, "escalated": {n}, "dropped": {n} }\`
 {{/if}}
 
 Also report core steps as features:
@@ -1823,7 +2015,7 @@ function buildDefaultConfig(overrides = {}) {
     ...overrides
   };
 }
-var DEFAULT_RESILIENCE, FEATURE_KEYS, DEFAULT_FEATURES;
+var DEFAULT_RESILIENCE, FEATURE_DEFAULTS, FEATURE_KEYS, DEFAULT_FEATURES;
 var init_schema = __esm({
   "src/config/schema.ts"() {
     "use strict";
@@ -1842,7 +2034,7 @@ var init_schema = __esm({
       vault_quiet_seconds: 30,
       preflight_enabled: true
     };
-    FEATURE_KEYS = Object.keys({
+    FEATURE_DEFAULTS = {
       memory: true,
       entity_auto_linking: true,
       question_tracker: true,
@@ -1865,46 +2057,24 @@ var init_schema = __esm({
       changelog: true,
       adaptive_batch_sizing: true,
       enrichment_priority: true,
-      social_content: true
-    });
-    DEFAULT_FEATURES = {
-      memory: true,
-      entity_auto_linking: true,
-      question_tracker: true,
-      context_anchoring: true,
-      meeting_enhancement: true,
-      auto_summary: true,
-      backlink_context: true,
-      transitive_links: true,
-      co_mention_network: true,
-      belief_trajectory: true,
-      theme_detection: true,
-      attention_allocation: true,
-      knowledge_gaps: true,
-      seasonal_patterns: true,
-      goal_tracking: true,
-      commitment_tracker: true,
-      this_time_last_year: true,
-      tag_normalization: true,
-      persona: true,
-      changelog: true,
-      adaptive_batch_sizing: true,
-      enrichment_priority: true,
-      social_content: true
+      social_content: true,
+      todo_lifecycle: true
     };
+    FEATURE_KEYS = Object.keys(FEATURE_DEFAULTS);
+    DEFAULT_FEATURES = { ...FEATURE_DEFAULTS };
   }
 });
 
 // src/config/loader.ts
-import { readFile as readFile2, writeFile as writeFile3, mkdir as mkdir3, copyFile, rename } from "fs/promises";
-import { join as join4 } from "path";
+import { readFile as readFile3, writeFile as writeFile4, mkdir as mkdir4, copyFile, rename as rename2 } from "fs/promises";
+import { join as join5 } from "path";
 import { parse, stringify } from "yaml";
 import chalk from "chalk";
 function getGardenerDir(cwd) {
-  return join4(cwd ?? process.cwd(), GARDENER_DIR);
+  return join5(cwd ?? process.cwd(), GARDENER_DIR);
 }
 function getConfigPath(cwd) {
-  return join4(getGardenerDir(cwd), CONFIG_FILE);
+  return join5(getGardenerDir(cwd), CONFIG_FILE);
 }
 function deepMerge(defaults, user) {
   const result2 = { ...defaults };
@@ -1923,10 +2093,10 @@ async function loadConfig(cwd) {
   let raw;
   let loadedFromBackup = false;
   try {
-    raw = await readFile2(configPath, "utf-8");
+    raw = await readFile3(configPath, "utf-8");
   } catch {
     try {
-      raw = await readFile2(bakPath, "utf-8");
+      raw = await readFile3(bakPath, "utf-8");
       loadedFromBackup = true;
       console.error(chalk.yellow("Config restored from .bak"));
     } catch {
@@ -1938,7 +2108,7 @@ async function loadConfig(cwd) {
     config = parse(raw);
   } catch {
     try {
-      const bakRaw = await readFile2(bakPath, "utf-8");
+      const bakRaw = await readFile3(bakPath, "utf-8");
       config = parse(bakRaw);
       loadedFromBackup = true;
       console.error(chalk.yellow("Config corrupted \u2014 restored from .bak"));
@@ -1959,7 +2129,7 @@ async function loadConfig(cwd) {
   config.resilience = { ...DEFAULT_RESILIENCE, ...config.resilience };
   config.features = { ...DEFAULT_FEATURES, ...config.features };
   if (loadedFromBackup) {
-    await writeFile3(configPath, stringify(config, { lineWidth: 0 }), "utf-8").catch(() => {
+    await writeFile4(configPath, stringify(config, { lineWidth: 0 }), "utf-8").catch(() => {
     });
   }
   await copyFile(configPath, bakPath).catch(() => {
@@ -1968,12 +2138,12 @@ async function loadConfig(cwd) {
 }
 async function saveConfig(config, cwd) {
   const gardenerDir = getGardenerDir(cwd);
-  await mkdir3(gardenerDir, { recursive: true });
+  await mkdir4(gardenerDir, { recursive: true });
   const configPath = getConfigPath(cwd);
   const tmpPath2 = configPath + ".tmp";
   const bakPath = configPath + ".bak";
-  await writeFile3(tmpPath2, stringify(config, { lineWidth: 0 }), "utf-8");
-  await rename(tmpPath2, configPath);
+  await writeFile4(tmpPath2, stringify(config, { lineWidth: 0 }), "utf-8");
+  await rename2(tmpPath2, configPath);
   await copyFile(configPath, bakPath).catch(() => {
   });
 }
@@ -2128,17 +2298,17 @@ var init_config2 = __esm({
 });
 
 // src/queue/index.ts
-import { readFile as readFile3, writeFile as writeFile5, rename as rename2 } from "fs/promises";
-import { join as join6 } from "path";
+import { readFile as readFile4, writeFile as writeFile6, rename as rename3 } from "fs/promises";
+import { join as join7 } from "path";
 function queuePath(gardenerDir) {
-  return join6(gardenerDir, QUEUE_FILE);
+  return join7(gardenerDir, QUEUE_FILE);
 }
 function tmpPath(gardenerDir) {
-  return join6(gardenerDir, QUEUE_FILE + ".tmp");
+  return join7(gardenerDir, QUEUE_FILE + ".tmp");
 }
 async function readQueue(gardenerDir) {
   try {
-    const raw = await readFile3(queuePath(gardenerDir), "utf-8");
+    const raw = await readFile4(queuePath(gardenerDir), "utf-8");
     return JSON.parse(raw);
   } catch {
     return [];
@@ -2146,8 +2316,8 @@ async function readQueue(gardenerDir) {
 }
 async function writeQueue(gardenerDir, entries) {
   const tmp = tmpPath(gardenerDir);
-  await writeFile5(tmp, JSON.stringify(entries, null, 2), "utf-8");
-  await rename2(tmp, queuePath(gardenerDir));
+  await writeFile6(tmp, JSON.stringify(entries, null, 2), "utf-8");
+  await rename3(tmp, queuePath(gardenerDir));
 }
 function isStale(entry, maxAgeHours) {
   const age = Date.now() - new Date(entry.queuedAt).getTime();
@@ -2184,14 +2354,14 @@ var init_queue = __esm({
 });
 
 // src/lock/index.ts
-import { readFile as readFile4, writeFile as writeFile6, unlink as unlink2, rename as rename3, open, constants } from "fs/promises";
-import { join as join7 } from "path";
+import { readFile as readFile5, writeFile as writeFile7, unlink as unlink2, rename as rename4, open, constants } from "fs/promises";
+import { join as join8 } from "path";
 import { hostname } from "os";
 function lockPath(gardenerDir) {
-  return join7(gardenerDir, LOCK_FILE);
+  return join8(gardenerDir, LOCK_FILE);
 }
 function heartbeatPath(gardenerDir) {
-  return join7(gardenerDir, HEARTBEAT_FILE);
+  return join8(gardenerDir, HEARTBEAT_FILE);
 }
 function isPidAlive(pid) {
   try {
@@ -2203,7 +2373,7 @@ function isPidAlive(pid) {
 }
 async function getHeartbeat(gardenerDir) {
   try {
-    const raw = await readFile4(heartbeatPath(gardenerDir), "utf-8");
+    const raw = await readFile5(heartbeatPath(gardenerDir), "utf-8");
     return JSON.parse(raw);
   } catch {
     return null;
@@ -2221,8 +2391,8 @@ async function isStaleWithHeartbeat(info, gardenerDir) {
 async function writeHeartbeat(gardenerDir) {
   const data = JSON.stringify({ pid: process.pid, timestamp: (/* @__PURE__ */ new Date()).toISOString() });
   const tmpFile = heartbeatPath(gardenerDir) + ".tmp";
-  await writeFile6(tmpFile, data, "utf-8");
-  await rename3(tmpFile, heartbeatPath(gardenerDir));
+  await writeFile7(tmpFile, data, "utf-8");
+  await rename4(tmpFile, heartbeatPath(gardenerDir));
 }
 async function removeFiles(gardenerDir) {
   await unlink2(lockPath(gardenerDir)).catch(() => {
@@ -2300,7 +2470,7 @@ async function isLocked(gardenerDir) {
 }
 async function getLockInfo(gardenerDir) {
   try {
-    const raw = await readFile4(lockPath(gardenerDir), "utf-8");
+    const raw = await readFile5(lockPath(gardenerDir), "utf-8");
     return JSON.parse(raw);
   } catch {
     return null;
@@ -2319,8 +2489,8 @@ var init_lock = __esm({
 });
 
 // src/logging/index.ts
-import { appendFile, stat, rename as rename4, mkdir as mkdir5 } from "fs/promises";
-import { join as join8 } from "path";
+import { appendFile, stat as stat2, rename as rename5, mkdir as mkdir6 } from "fs/promises";
+import { join as join9 } from "path";
 function buildEntry(level, event, data) {
   return {
     timestamp: (/* @__PURE__ */ new Date()).toISOString(),
@@ -2331,21 +2501,21 @@ function buildEntry(level, event, data) {
 }
 async function rotateIfNeeded(logPath, maxBytes, maxBackups) {
   try {
-    const info = await stat(logPath);
+    const info = await stat2(logPath);
     if (info.size > maxBytes) {
       for (let i = maxBackups - 1; i >= 1; i--) {
-        await rename4(`${logPath}.${i}`, `${logPath}.${i + 1}`).catch(() => {
+        await rename5(`${logPath}.${i}`, `${logPath}.${i + 1}`).catch(() => {
         });
       }
-      await rename4(logPath, `${logPath}.1`);
+      await rename5(logPath, `${logPath}.1`);
     }
   } catch {
   }
 }
 async function createLogger(gardenerDir, opts) {
-  const logsDir = join8(gardenerDir, LOG_DIR);
-  await mkdir5(logsDir, { recursive: true });
-  const logPath = join8(logsDir, LOG_FILE);
+  const logsDir = join9(gardenerDir, LOG_DIR);
+  await mkdir6(logsDir, { recursive: true });
+  const logPath = join9(logsDir, LOG_FILE);
   const maxBytes = opts?.maxLogBytes ?? DEFAULT_MAX_LOG_BYTES;
   const maxBackups = opts?.maxBackups ?? DEFAULT_MAX_BACKUPS;
   await rotateIfNeeded(logPath, maxBytes, maxBackups);
@@ -2402,83 +2572,33 @@ var init_logging = __esm({
 });
 
 // src/metrics/collector.ts
-import { readFile as readFile5, writeFile as writeFile7, readdir as readdir3, mkdir as mkdir6, stat as stat3, rename as rename5 } from "fs/promises";
-import { join as join10, extname as extname2 } from "path";
+import { readFile as readFile6, readdir as readdir4, stat as stat4 } from "fs/promises";
+import { join as join11, extname as extname3 } from "path";
 import { execFile } from "child_process";
 import { promisify } from "util";
-import { performance as performance2 } from "perf_hooks";
-async function walkMd(dir, opts) {
-  const maxFiles = opts?.maxFiles ?? DEFAULT_MAX_FILES;
-  const timeoutMs = opts?.timeout;
-  const startTime = timeoutMs != null ? performance2.now() : 0;
-  const results = [];
-  let approximate = false;
-  let timedOut = false;
-  async function walk(d) {
-    if (approximate || timedOut) return;
-    if (timeoutMs != null && performance2.now() - startTime > timeoutMs) {
-      timedOut = true;
-      approximate = true;
-      return;
-    }
-    let entries;
-    try {
-      entries = await readdir3(d, { withFileTypes: true });
-    } catch {
-      return;
-    }
-    for (const entry of entries) {
-      if (approximate || timedOut) return;
-      if (entry.name.startsWith(".") || SKIP_DIRS3.has(entry.name)) continue;
-      if (entry.isSymbolicLink()) continue;
-      const full = join10(d, entry.name);
-      if (entry.isDirectory()) {
-        await walk(full);
-      } else if (entry.isFile() && extname2(entry.name) === ".md") {
-        results.push(full);
-        if (results.length >= maxFiles) {
-          approximate = true;
-          return;
-        }
-      }
-    }
-  }
-  await walk(dir);
-  return { files: results, approximate, timedOut };
-}
+import { performance as performance3 } from "perf_hooks";
 async function countInbox(dir) {
   try {
-    const entries = await readdir3(dir, { withFileTypes: true });
-    return entries.filter((e) => e.isFile() && extname2(e.name) === ".md").length;
+    const entries = await readdir4(dir, { withFileTypes: true });
+    return entries.filter((e) => e.isFile() && extname3(e.name) === ".md").length;
   } catch {
     return 0;
   }
 }
-async function matchesInHead(filePath, pattern, lines) {
-  try {
-    const info = await stat3(filePath);
-    if (info.size > MAX_FILE_SIZE) return false;
-    const content = await readFile5(filePath, "utf-8");
-    const head = content.split("\n").slice(0, lines).join("\n");
-    return head.includes(pattern);
-  } catch {
-    return false;
-  }
-}
 async function countLinks(files, timeout) {
   const timeoutMs = timeout ?? COUNT_LINKS_TIMEOUT_MS;
-  const startTime = performance2.now();
+  const startTime = performance3.now();
   let total = 0;
   const linkPattern = /\[\[/g;
   for (let i = 0; i < files.length; i += BATCH_SIZE) {
-    if (performance2.now() - startTime > timeoutMs) break;
+    if (performance3.now() - startTime > timeoutMs) break;
     const batch = files.slice(i, i + BATCH_SIZE);
     const batchResults = await Promise.all(
       batch.map(async (file) => {
         try {
-          const info = await stat3(file);
-          if (info.size > MAX_FILE_SIZE) return 0;
-          const content = await readFile5(file, "utf-8");
+          const info = await stat4(file);
+          if (info.size > MAX_FILE_SIZE2) return 0;
+          const content = await readFile6(file, "utf-8");
           const matches = content.match(linkPattern);
           return matches ? matches.length : 0;
         } catch {
@@ -2502,10 +2622,10 @@ async function countMoved(cwd) {
 }
 async function countSeeds(files, timeout) {
   const timeoutMs = timeout ?? SEED_DETECTION_TIMEOUT_MS;
-  const startTime = performance2.now();
+  const startTime = performance3.now();
   let total = 0;
   for (let i = 0; i < files.length; i += BATCH_SIZE) {
-    if (performance2.now() - startTime > timeoutMs) break;
+    if (performance3.now() - startTime > timeoutMs) break;
     const batch = files.slice(i, i + BATCH_SIZE);
     const results = await Promise.all(
       batch.map((f) => matchesInHead(f, "status: seed", 10))
@@ -2515,8 +2635,8 @@ async function countSeeds(files, timeout) {
   return total;
 }
 async function collectPreMetrics(vaultPath, config, opts) {
-  const inboxDir = join10(vaultPath, config.folders.inbox ?? "00-inbox");
-  const walkResult = await walkMd(vaultPath, opts);
+  const inboxDir = join11(vaultPath, config.folders.inbox ?? "00-inbox");
+  const walkResult = await walkMarkdownFiles(vaultPath, opts);
   const seedCount = await countSeeds(walkResult.files);
   const linkCount = await countLinks(walkResult.files);
   return {
@@ -2528,8 +2648,8 @@ async function collectPreMetrics(vaultPath, config, opts) {
   };
 }
 async function collectPostMetrics(vaultPath, config, pre, opts) {
-  const inboxDir = join10(vaultPath, config.folders.inbox ?? "00-inbox");
-  const walkResult = await walkMd(vaultPath, opts);
+  const inboxDir = join11(vaultPath, config.folders.inbox ?? "00-inbox");
+  const walkResult = await walkMarkdownFiles(vaultPath, opts);
   const seedCount = await countSeeds(walkResult.files);
   const linkCount = await countLinks(walkResult.files);
   const inboxItems = await countInbox(inboxDir);
@@ -2546,58 +2666,21 @@ async function collectPostMetrics(vaultPath, config, pre, opts) {
   };
 }
 async function writeMetrics(gardenerDir, metrics) {
-  const metricsDir = join10(gardenerDir, "metrics");
-  await mkdir6(metricsDir, { recursive: true });
-  const filename = `${metrics.date}.json`;
-  const filePath = join10(metricsDir, filename);
-  let runs = [];
-  try {
-    const raw = await readFile5(filePath, "utf-8");
-    const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed)) {
-      runs = parsed;
-    }
-  } catch {
-  }
-  runs.push(metrics);
-  const tmpFile = filePath + ".tmp";
-  await writeFile7(tmpFile, JSON.stringify(runs, null, 2), "utf-8");
-  await rename5(tmpFile, filePath);
+  const filePath = join11(gardenerDir, "metrics", `${metrics.date}.json`);
+  await appendJsonArrayFile(filePath, metrics);
 }
 async function readMetrics(gardenerDir, days) {
-  const metricsDir = join10(gardenerDir, "metrics");
-  let files;
-  try {
-    const entries = await readdir3(metricsDir);
-    files = entries.filter((f) => f.endsWith(".json")).sort();
-  } catch {
-    return [];
-  }
-  if (days && days > 0) {
-    const cutoff = /* @__PURE__ */ new Date();
-    cutoff.setDate(cutoff.getDate() - days);
-    const cutoffStr = cutoff.toISOString().slice(0, 10);
-    files = files.filter((f) => f.replace(".json", "") >= cutoffStr);
-  }
-  const allRuns = [];
-  for (const file of files) {
-    try {
-      const raw = await readFile5(join10(metricsDir, file), "utf-8");
-      const runs = JSON.parse(raw);
-      allRuns.push(...runs);
-    } catch {
-    }
-  }
-  return allRuns.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+  const metricsDir = join11(gardenerDir, "metrics");
+  const runs = await readJsonArrayDir(metricsDir, days);
+  return runs.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
 }
-var execFileAsync, SKIP_DIRS3, DEFAULT_MAX_FILES, MAX_FILE_SIZE, COUNT_LINKS_TIMEOUT_MS, BATCH_SIZE, SEED_DETECTION_TIMEOUT_MS;
+var execFileAsync, MAX_FILE_SIZE2, COUNT_LINKS_TIMEOUT_MS, BATCH_SIZE, SEED_DETECTION_TIMEOUT_MS;
 var init_collector = __esm({
   "src/metrics/collector.ts"() {
     "use strict";
+    init_fs();
     execFileAsync = promisify(execFile);
-    SKIP_DIRS3 = /* @__PURE__ */ new Set([".git", ".obsidian", ".gardener", "node_modules", ".trash"]);
-    DEFAULT_MAX_FILES = 5e4;
-    MAX_FILE_SIZE = 1048576;
+    MAX_FILE_SIZE2 = 1048576;
     COUNT_LINKS_TIMEOUT_MS = 3e4;
     BATCH_SIZE = 100;
     SEED_DETECTION_TIMEOUT_MS = 3e4;
@@ -2631,20 +2714,20 @@ var init_utils = __esm({
 });
 
 // src/analysis/suggestions.ts
-import { readdir as readdir5, readFile as readFile8, stat as stat4 } from "fs/promises";
-import { join as join13, extname as extname3 } from "path";
+import { readdir as readdir5, readFile as readFile9, stat as stat5 } from "fs/promises";
+import { join as join14, extname as extname4 } from "path";
 async function generateSuggestions(opts) {
   const suggestions = [];
   const { vaultPath, folders } = opts;
   try {
-    const inboxPath = join13(vaultPath, folders.inbox ?? "00-inbox");
+    const inboxPath = join14(vaultPath, folders.inbox ?? "00-inbox");
     const entries = await readdir5(inboxPath, { withFileTypes: true });
-    const mdFiles = entries.filter((e) => e.isFile() && extname3(e.name) === ".md");
+    const mdFiles = entries.filter((e) => e.isFile() && extname4(e.name) === ".md");
     const now = Date.now();
     let oldCount = 0;
     for (const file of mdFiles) {
       try {
-        const s = await stat4(join13(inboxPath, file.name));
+        const s = await stat5(join14(inboxPath, file.name));
         if ((now - s.mtimeMs) / (1e3 * 60 * 60 * 24) > 7) oldCount++;
       } catch {
         continue;
@@ -2659,12 +2742,12 @@ async function generateSuggestions(opts) {
   let staleGrowing = 0;
   for (const folder of growingFolders) {
     try {
-      const folderPath = join13(vaultPath, folder);
+      const folderPath = join14(vaultPath, folder);
       const entries = await readdir5(folderPath, { recursive: true });
       const mdFiles = entries.filter((e) => e.endsWith(".md"));
       for (const file of mdFiles.slice(0, 50)) {
         try {
-          const content = await readFile8(join13(folderPath, file), "utf-8");
+          const content = await readFile9(join14(folderPath, file), "utf-8");
           const fm = parseFrontmatter(content);
           if (fm.status !== "growing") continue;
           const updated = fm.updated ? new Date(fm.updated) : null;
@@ -2683,13 +2766,13 @@ async function generateSuggestions(opts) {
     suggestions.push(`${staleGrowing} growing note${staleGrowing > 1 ? "s haven't" : " hasn't"} been updated in 30+ days`);
   }
   try {
-    const projectsPath = join13(vaultPath, folders.projects ?? "02-projects");
+    const projectsPath = join14(vaultPath, folders.projects ?? "02-projects");
     const entries = await readdir5(projectsPath, { recursive: true });
     const mdFiles = entries.filter((e) => e.endsWith(".md"));
     let approachingCount = 0;
     for (const file of mdFiles) {
       try {
-        const content = await readFile8(join13(projectsPath, file), "utf-8");
+        const content = await readFile9(join14(projectsPath, file), "utf-8");
         const fm = parseFrontmatter(content);
         if (!fm.deadline || fm.status === "archived") continue;
         const deadline = new Date(fm.deadline);
@@ -2714,8 +2797,8 @@ var init_suggestions = __esm({
 });
 
 // src/analysis/weekly-brief.ts
-import { readdir as readdir6, readFile as readFile9 } from "fs/promises";
-import { join as join14, basename } from "path";
+import { readdir as readdir6, readFile as readFile10 } from "fs/promises";
+import { join as join15, basename } from "path";
 async function generateWeeklyBrief(opts) {
   const { vaultPath, folders } = opts;
   const weekAgo = await gitCommand(vaultPath, ["log", "--since=7 days ago", "--diff-filter=A", "--name-only", "--format=", "--", "*.md"]);
@@ -2729,12 +2812,12 @@ async function generateWeeklyBrief(opts) {
   const mostActiveAreas = Object.entries(areaActivity).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([folder]) => folder);
   const approachingDeadlines = [];
   try {
-    const projectsPath = join14(vaultPath, folders.projects ?? "02-projects");
+    const projectsPath = join15(vaultPath, folders.projects ?? "02-projects");
     const entries = await readdir6(projectsPath, { recursive: true });
     const mdFiles = entries.filter((e) => e.endsWith(".md"));
     for (const file of mdFiles) {
       try {
-        const content = await readFile9(join14(projectsPath, file), "utf-8");
+        const content = await readFile10(join15(projectsPath, file), "utf-8");
         const fm = parseFrontmatter(content);
         if (!fm.deadline || fm.status === "archived") continue;
         const deadline = new Date(fm.deadline);
@@ -2757,11 +2840,11 @@ async function generateWeeklyBrief(opts) {
   const archiveFolders = ["projects", "resources"].map((k) => folders[k]).filter((v) => typeof v === "string" && v.length > 0);
   for (const folder of archiveFolders) {
     try {
-      const folderPath = join14(vaultPath, folder);
+      const folderPath = join15(vaultPath, folder);
       const entries = await readdir6(folderPath, { recursive: true });
       for (const file of entries.filter((e) => e.endsWith(".md")).slice(0, 50)) {
         try {
-          const content = await readFile9(join14(folderPath, file), "utf-8");
+          const content = await readFile10(join15(folderPath, file), "utf-8");
           const fm = parseFrontmatter(content);
           if (fm.status !== "seed") continue;
           const created = fm.created ? new Date(fm.created) : null;
@@ -2876,7 +2959,7 @@ __export(digest_exports, {
   generateDigest: () => generateDigest
 });
 import { writeFile as writeFile9, mkdir as mkdir8 } from "fs/promises";
-import { join as join15 } from "path";
+import { join as join16 } from "path";
 import chalk5 from "chalk";
 async function digestCommand(options) {
   const cwd = process.cwd();
@@ -2916,7 +2999,7 @@ async function generateDigest(vaultPath, options = {}) {
   if (activity.inboxProcessed > 0) summaryParts.push(`${activity.inboxProcessed} inbox items processed`);
   if (activity.linksCreated > 0) summaryParts.push(`${activity.linksCreated} WikiLinks created`);
   if (activity.notesEnriched.length > 0) summaryParts.push(`${activity.notesEnriched.length} notes enriched`);
-  const inboxCount = await countInbox(join15(vaultPath, config.folders.inbox ?? "00-inbox"));
+  const inboxCount = await countInbox(join16(vaultPath, config.folders.inbox ?? "00-inbox"));
   if (inboxCount > 0) summaryParts.push(`${inboxCount} item${inboxCount !== 1 ? "s" : ""} in inbox`);
   const summary = summaryParts.length > 0 ? summaryParts.join(", ") : "No recent gardener activity";
   const digest = {
@@ -2934,7 +3017,7 @@ async function generateDigest(vaultPath, options = {}) {
     });
   }
   if (options.writeToDisk !== false) {
-    const digestPath = join15(gardenerDir, "digest.json");
+    const digestPath = join16(gardenerDir, "digest.json");
     await mkdir8(gardenerDir, { recursive: true });
     await writeFile9(digestPath, JSON.stringify(digest, null, 2), "utf-8");
   }
@@ -2991,8 +3074,8 @@ var recover_exports = {};
 __export(recover_exports, {
   recoverCommand: () => recoverCommand
 });
-import { readFile as readFile15, readdir as readdir7, rename as rename8, rm, stat as stat5, unlink as unlink5, access as access4 } from "fs/promises";
-import { join as join23 } from "path";
+import { readFile as readFile16, readdir as readdir7, rename as rename7, rm, stat as stat6, unlink as unlink5, access as access4 } from "fs/promises";
+import { join as join24 } from "path";
 import { execFileSync as execFileSync2 } from "child_process";
 import chalk10 from "chalk";
 async function recoverCommand() {
@@ -3002,9 +3085,9 @@ async function recoverCommand() {
   let fixed = 0;
   let reported = 0;
   console.log(chalk10.bold("\nvault-gardener recover\n"));
-  const lockFile = join23(gardenerDir, ".lock");
+  const lockFile = join24(gardenerDir, ".lock");
   try {
-    const raw = await readFile15(lockFile, "utf-8");
+    const raw = await readFile16(lockFile, "utf-8");
     let lockData;
     try {
       lockData = JSON.parse(raw);
@@ -3028,7 +3111,7 @@ async function recoverCommand() {
     }
   } catch {
   }
-  const heartbeatFile = join23(gardenerDir, ".lock-heartbeat");
+  const heartbeatFile = join24(gardenerDir, ".lock-heartbeat");
   try {
     await access4(heartbeatFile);
     try {
@@ -3058,9 +3141,9 @@ async function recoverCommand() {
     }
   } catch {
   }
-  const tmpDir = join23(gardenerDir, ".gardener.tmp");
+  const tmpDir = join24(gardenerDir, ".gardener.tmp");
   try {
-    const info = await stat5(tmpDir);
+    const info = await stat6(tmpDir);
     if (info.isDirectory()) {
       await rm(tmpDir, { recursive: true, force: true });
       console.log(chalk10.green("  [FIXED] Removed orphan .gardener.tmp/"));
@@ -3078,18 +3161,18 @@ async function recoverCommand() {
     }
   } catch {
   }
-  const metricsDir = join23(gardenerDir, "metrics");
+  const metricsDir = join24(gardenerDir, "metrics");
   try {
     const files = await readdir7(metricsDir);
     for (const file of files) {
       if (!file.endsWith(".json")) continue;
-      const filePath = join23(metricsDir, file);
+      const filePath = join24(metricsDir, file);
       try {
-        const raw = await readFile15(filePath, "utf-8");
+        const raw = await readFile16(filePath, "utf-8");
         JSON.parse(raw);
       } catch {
         const corruptPath = filePath + ".corrupt";
-        await rename8(filePath, corruptPath);
+        await rename7(filePath, corruptPath);
         console.log(chalk10.green(`  [FIXED] Renamed corrupted metrics: ${file} \u2192 ${file}.corrupt`));
         logger.info("recover.corrupt_metrics", { context: { file } });
         fixed++;
@@ -3119,14 +3202,15 @@ import { createRequire } from "module";
 import { Command } from "commander";
 
 // src/cli/init.ts
-import { mkdir as mkdir4, access as access2 } from "fs/promises";
-import { join as join5 } from "path";
+import { mkdir as mkdir5, access as access2 } from "fs/promises";
+import { join as join6 } from "path";
 import { createInterface } from "readline";
 import chalk3 from "chalk";
 
 // src/scanner/detect.ts
-import { readdir, access } from "fs/promises";
-import { join, extname } from "path";
+init_fs();
+import { readdir as readdir2, access } from "fs/promises";
+import { join as join2, extname as extname2 } from "path";
 var PARA_PLUS_PATTERNS = {
   "00-inbox": "inbox",
   "01-journal": "journal",
@@ -3144,15 +3228,8 @@ var ZETTELKASTEN_FOLDERS = ["inbox", "zettelkasten", "references", "templates"];
 var FLAT_FOLDERS = ["inbox", "notes", "archive"];
 var ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}\.md$/;
 var YEAR_RE = /^(20\d{2})$/;
-var SKIP_DIRS = /* @__PURE__ */ new Set([
-  "node_modules",
-  ".git",
-  ".obsidian",
-  ".logseq",
-  ".foam",
-  ".trash",
-  ".gardener"
-]);
+var MIN_PRESET_CONFIDENCE = 0.2;
+var ISO_DATE_NAMING_THRESHOLD = 0.5;
 async function exists(path) {
   try {
     await access(path);
@@ -3161,32 +3238,11 @@ async function exists(path) {
     return false;
   }
 }
-var COUNT_MAX_FILES = 5e4;
-async function countMarkdownFiles(dir, state = { count: 0 }) {
-  if (state.count >= COUNT_MAX_FILES) return state.count;
-  let entries;
-  try {
-    entries = await readdir(dir, { withFileTypes: true });
-  } catch {
-    return state.count;
-  }
-  for (const entry of entries) {
-    if (state.count >= COUNT_MAX_FILES) break;
-    if (entry.name.startsWith(".") || SKIP_DIRS.has(entry.name)) continue;
-    const fullPath = join(dir, entry.name);
-    if (entry.isDirectory()) {
-      await countMarkdownFiles(fullPath, state);
-    } else if (entry.isFile() && extname(entry.name) === ".md") {
-      state.count++;
-    }
-  }
-  return state.count;
-}
 async function detectTool(vaultPath) {
-  if (await exists(join(vaultPath, ".obsidian"))) return "obsidian";
-  if (await exists(join(vaultPath, ".logseq"))) return "logseq";
-  if (await exists(join(vaultPath, ".foam"))) return "foam";
-  if (await exists(join(vaultPath, ".dendron.yml"))) return "dendron";
+  if (await exists(join2(vaultPath, ".obsidian"))) return "obsidian";
+  if (await exists(join2(vaultPath, ".logseq"))) return "logseq";
+  if (await exists(join2(vaultPath, ".foam"))) return "foam";
+  if (await exists(join2(vaultPath, ".dendron.yml"))) return "dendron";
   return null;
 }
 function detectFolders(topLevelDirs) {
@@ -3244,7 +3300,7 @@ function scorePreset(detected, topLevelDirs) {
   ];
   scores.sort((a, b) => b.confidence - a.confidence);
   const best = scores[0];
-  if (best.confidence < 0.2) {
+  if (best.confidence < MIN_PRESET_CONFIDENCE) {
     return { preset: null, confidence: 0 };
   }
   return { preset: best.preset, confidence: Math.round(best.confidence * 100) / 100 };
@@ -3255,13 +3311,13 @@ async function detectJournalStructure(vaultPath, detected) {
     subfolders: {},
     namingPattern: "unknown"
   };
-  const journalDir = detected.journal ? join(vaultPath, detected.journal) : null;
+  const journalDir = detected.journal ? join2(vaultPath, detected.journal) : null;
   if (!journalDir || !await exists(journalDir)) {
     return result2;
   }
   let entries;
   try {
-    entries = await readdir(journalDir, { withFileTypes: true });
+    entries = await readdir2(journalDir, { withFileTypes: true });
   } catch {
     return result2;
   }
@@ -3270,11 +3326,11 @@ async function detectJournalStructure(vaultPath, detected) {
   );
   result2.hasYearFolders = yearFolders.length > 0;
   const subfoldersToCheck = ["yearly", "quarterly", "monthly", "weekly", "daily"];
-  const searchDirs = result2.hasYearFolders ? yearFolders.map((yf) => join(journalDir, yf.name)) : [journalDir];
+  const searchDirs = result2.hasYearFolders ? yearFolders.map((yf) => join2(journalDir, yf.name)) : [journalDir];
   for (const searchDir of searchDirs) {
     let subEntries;
     try {
-      subEntries = await readdir(searchDir, { withFileTypes: true });
+      subEntries = await readdir2(searchDir, { withFileTypes: true });
     } catch {
       continue;
     }
@@ -3292,7 +3348,7 @@ async function detectJournalStructure(vaultPath, detected) {
   const mdFiles = await collectJournalFiles(journalDir, 3);
   if (mdFiles.length > 0) {
     const isoCount = mdFiles.filter((f) => ISO_DATE_RE.test(f)).length;
-    if (isoCount / mdFiles.length > 0.5) {
+    if (isoCount / mdFiles.length > ISO_DATE_NAMING_THRESHOLD) {
       result2.namingPattern = "iso-date";
     } else if (mdFiles.length > 0) {
       result2.namingPattern = "custom";
@@ -3304,7 +3360,7 @@ async function collectJournalFiles(dir, maxDepth, depth = 0) {
   if (depth > maxDepth) return [];
   let entries;
   try {
-    entries = await readdir(dir, { withFileTypes: true });
+    entries = await readdir2(dir, { withFileTypes: true });
   } catch {
     return [];
   }
@@ -3313,24 +3369,25 @@ async function collectJournalFiles(dir, maxDepth, depth = 0) {
     if (entry.name.startsWith(".")) continue;
     if (entry.isDirectory()) {
       const sub = await collectJournalFiles(
-        join(dir, entry.name),
+        join2(dir, entry.name),
         maxDepth,
         depth + 1
       );
       files.push(...sub);
-    } else if (entry.isFile() && extname(entry.name) === ".md") {
+    } else if (entry.isFile() && extname2(entry.name) === ".md") {
       files.push(entry.name);
     }
   }
   return files;
 }
 async function scanVault(vaultPath) {
-  const entries = await readdir(vaultPath, { withFileTypes: true });
+  const entries = await readdir2(vaultPath, { withFileTypes: true });
   const topLevelDirs = entries.filter((e) => e.isDirectory() && !e.name.startsWith(".")).map((e) => e.name);
   const detected = detectFolders(topLevelDirs);
   const { preset, confidence } = scorePreset(detected, topLevelDirs);
   const tool = await detectTool(vaultPath);
-  const totalNotes = await countMarkdownFiles(vaultPath);
+  const walkResult = await walkMarkdownFiles(vaultPath);
+  const totalNotes = walkResult.files.length;
   const journalStructure = await detectJournalStructure(vaultPath, detected);
   return {
     preset,
@@ -3580,7 +3637,7 @@ async function runInit(cwd, gardenerDir, interactive, options, rl) {
       );
       if (scaffold.toLowerCase() !== "n") {
         for (const folder of Object.values(config.folders)) {
-          await mkdir4(join5(cwd, folder), { recursive: true });
+          await mkdir5(join6(cwd, folder), { recursive: true });
         }
         console.log(chalk3.green("Folders created."));
       }
@@ -3635,10 +3692,10 @@ async function runInit(cwd, gardenerDir, interactive, options, rl) {
     chalk3.dim(`
 Provider: ${config.provider}, Tier: ${config.tier}, Model: ${model}`)
   );
-  await mkdir4(gardenerDir, { recursive: true });
-  await mkdir4(join5(gardenerDir, "prompts"), { recursive: true });
-  await mkdir4(join5(gardenerDir, "metrics"), { recursive: true });
-  await mkdir4(join5(gardenerDir, "logs"), { recursive: true });
+  await mkdir5(gardenerDir, { recursive: true });
+  await mkdir5(join6(gardenerDir, "prompts"), { recursive: true });
+  await mkdir5(join6(gardenerDir, "metrics"), { recursive: true });
+  await mkdir5(join6(gardenerDir, "logs"), { recursive: true });
   await saveConfig(config, cwd);
   console.log(chalk3.dim("Wrote .gardener/config.yaml"));
   await renderAll(gardenerDir, config);
@@ -3664,26 +3721,26 @@ init_config2();
 init_render();
 init_lock();
 init_logging();
-import { join as join16 } from "path";
+import { join as join17 } from "path";
 import { writeFile as writeFile10 } from "fs/promises";
 import chalk6 from "chalk";
 import ora from "ora";
 
 // src/preflight/index.ts
-import { readdir as readdir2, stat as stat2, access as access3 } from "fs/promises";
-import { join as join9 } from "path";
+init_constants();
+import { readdir as readdir3, stat as stat3, access as access3 } from "fs/promises";
+import { join as join10 } from "path";
 import { execFileSync } from "child_process";
-import { performance } from "perf_hooks";
+import { performance as performance2 } from "perf_hooks";
 var SYNC_CONFLICT_MAX_FILES = 1e4;
 var SYNC_CONFLICT_TIMEOUT_MS = 5e3;
-var SKIP_DIRS2 = /* @__PURE__ */ new Set([".git", ".obsidian", ".gardener", "node_modules", ".trash"]);
 function result() {
   return { ok: true, errors: [], warnings: [] };
 }
 async function checkVaultAccessibility(vaultPath, r, timeout = 5e3) {
   try {
     await Promise.race([
-      readdir2(vaultPath),
+      readdir3(vaultPath),
       new Promise(
         (_, reject) => setTimeout(() => reject(new Error("Vault access timed out")), timeout)
       )
@@ -3695,7 +3752,7 @@ async function checkVaultAccessibility(vaultPath, r, timeout = 5e3) {
 }
 async function checkVaultQuiet(vaultPath, config, r) {
   const quietSeconds = config.resilience?.vault_quiet_seconds ?? 30;
-  const inboxDir = join9(vaultPath, config.folders?.inbox ?? "00-inbox");
+  const inboxDir = join10(vaultPath, config.folders?.inbox ?? "00-inbox");
   const dirsToCheck = [vaultPath, inboxDir];
   try {
     const now = Date.now();
@@ -3703,13 +3760,13 @@ async function checkVaultQuiet(vaultPath, config, r) {
     for (const dir of dirsToCheck) {
       let entries;
       try {
-        entries = await readdir2(dir, { withFileTypes: true });
+        entries = await readdir3(dir, { withFileTypes: true });
       } catch {
         continue;
       }
       for (const entry of entries) {
         if (!entry.isFile() || !entry.name.endsWith(".md")) continue;
-        const info = await stat2(join9(dir, entry.name));
+        const info = await stat3(join10(dir, entry.name));
         if (now - info.mtimeMs < threshold) {
           r.warnings.push(`Vault has recent edits (${entry.name} modified <${quietSeconds}s ago)`);
           return;
@@ -3721,24 +3778,24 @@ async function checkVaultQuiet(vaultPath, config, r) {
 }
 async function detectSyncConflicts(vaultPath, r) {
   const conflictPatterns = ["sync-conflict", "(conflict)", ".icloud"];
-  const startTime = performance.now();
+  const startTime = performance2.now();
   let filesChecked = 0;
   async function walk(dir) {
     if (filesChecked >= SYNC_CONFLICT_MAX_FILES) return;
-    if (performance.now() - startTime > SYNC_CONFLICT_TIMEOUT_MS) return;
+    if (performance2.now() - startTime > SYNC_CONFLICT_TIMEOUT_MS) return;
     let entries;
     try {
-      entries = await readdir2(dir, { withFileTypes: true });
+      entries = await readdir3(dir, { withFileTypes: true });
     } catch {
       return;
     }
     for (const entry of entries) {
       if (filesChecked >= SYNC_CONFLICT_MAX_FILES) return;
-      if (performance.now() - startTime > SYNC_CONFLICT_TIMEOUT_MS) return;
+      if (performance2.now() - startTime > SYNC_CONFLICT_TIMEOUT_MS) return;
       const name = entry.name;
       if (name.startsWith(".") && name !== ".icloud") continue;
-      if (SKIP_DIRS2.has(name)) continue;
-      const full = join9(dir, name);
+      if (SKIP_DIRS.has(name)) continue;
+      const full = join10(dir, name);
       if (entry.isDirectory()) {
         await walk(full);
       } else {
@@ -3812,7 +3869,7 @@ function checkDiskSpace(vaultPath, r, minMB = 100) {
 }
 async function checkPreviousRunDirty(gardenerDir, r) {
   try {
-    const entries = await readdir2(gardenerDir);
+    const entries = await readdir3(gardenerDir);
     for (const name of entries) {
       if (name === ".lock" || name.endsWith(".gardener.tmp")) {
         r.warnings.push(`Stale artifact from previous run: ${name}`);
@@ -3833,7 +3890,7 @@ function checkProviderCli(provider, r) {
   }
 }
 async function checkContextFiles(gardenerDir, r) {
-  const promptsDir = join9(gardenerDir, "prompts");
+  const promptsDir = join10(gardenerDir, "prompts");
   try {
     await access3(promptsDir);
   } catch {
@@ -3956,7 +4013,8 @@ var FEATURE_PHASE_MAP = {
   adaptive_batch_sizing: ["tend"],
   enrichment_priority: ["tend"],
   context_anchoring: ["tend"],
-  auto_summary: ["tend"]
+  auto_summary: ["tend"],
+  todo_lifecycle: ["tend"]
 };
 function featuresForPhase(phase, enabledFeatures) {
   const flags = enabledFeatures;
@@ -3964,15 +4022,15 @@ function featuresForPhase(phase, enabledFeatures) {
 }
 
 // src/reports/parser.ts
-import { readFile as readFile6 } from "fs/promises";
-import { join as join11 } from "path";
+import { readFile as readFile7 } from "fs/promises";
+import { join as join12 } from "path";
 var REPORT_FILENAME = "run-report.json";
 async function parseRunReport(cwd, enabledFeatures) {
-  const gardenerDir = join11(cwd, ".gardener");
-  const reportPath = join11(gardenerDir, REPORT_FILENAME);
+  const gardenerDir = join12(cwd, ".gardener");
+  const reportPath = join12(gardenerDir, REPORT_FILENAME);
   let raw;
   try {
-    raw = await readFile6(reportPath, "utf-8");
+    raw = await readFile7(reportPath, "utf-8");
   } catch {
     return null;
   }
@@ -4064,50 +4122,18 @@ function validateFeatureReport(f, phase, warnings) {
 }
 
 // src/reports/store.ts
-import { readFile as readFile7, writeFile as writeFile8, readdir as readdir4, mkdir as mkdir7, rename as rename6 } from "fs/promises";
-import { join as join12 } from "path";
+init_fs();
+import { readFile as readFile8, writeFile as writeFile8, mkdir as mkdir7 } from "fs/promises";
+import { join as join13 } from "path";
 async function archiveReport(gardenerDir, report) {
   const date = report.timestamp.slice(0, 10);
-  const reportsDir = join12(gardenerDir, "reports");
-  await mkdir7(reportsDir, { recursive: true });
-  const filePath = join12(reportsDir, `${date}.json`);
-  let existing = [];
-  try {
-    const raw = await readFile7(filePath, "utf-8");
-    const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed)) existing = parsed;
-  } catch {
-  }
-  existing.push(report);
-  const tmpFile = filePath + ".tmp";
-  await writeFile8(tmpFile, JSON.stringify(existing, null, 2), "utf-8");
-  await rename6(tmpFile, filePath);
+  const filePath = join13(gardenerDir, "reports", `${date}.json`);
+  await appendJsonArrayFile(filePath, report);
 }
 async function readReports(gardenerDir, days = 30) {
-  const reportsDir = join12(gardenerDir, "reports");
-  let files;
-  try {
-    const entries = await readdir4(reportsDir);
-    files = entries.filter((f) => f.endsWith(".json")).sort();
-  } catch {
-    return [];
-  }
-  if (days > 0) {
-    const cutoff = /* @__PURE__ */ new Date();
-    cutoff.setDate(cutoff.getDate() - days);
-    const cutoffStr = cutoff.toISOString().slice(0, 10);
-    files = files.filter((f) => f.replace(".json", "") >= cutoffStr);
-  }
-  const all = [];
-  for (const file of files) {
-    try {
-      const raw = await readFile7(join12(reportsDir, file), "utf-8");
-      const reports = JSON.parse(raw);
-      all.push(...reports);
-    } catch {
-    }
-  }
-  return all.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+  const reportsDir = join13(gardenerDir, "reports");
+  const reports = await readJsonArrayDir(reportsDir, days);
+  return reports.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
 }
 async function readLatestReport(gardenerDir) {
   const reports = await readReports(gardenerDir, 7);
@@ -4118,12 +4144,12 @@ async function writeGardeningLog(gardenerDir, report, ctx) {
   const date = localDate(now);
   const year = date.slice(0, 4);
   const time = localTime(now);
-  const logsDir = join12(gardenerDir, "logs", year);
+  const logsDir = join13(gardenerDir, "logs", year);
   await mkdir7(logsDir, { recursive: true });
-  const logPath = join12(logsDir, `${date}.md`);
+  const logPath = join13(logsDir, `${date}.md`);
   let existing = "";
   try {
-    existing = await readFile7(logPath, "utf-8");
+    existing = await readFile8(logPath, "utf-8");
   } catch {
   }
   const entry = renderLogEntry(report, ctx, time);
@@ -4230,17 +4256,6 @@ function resolveModelName(config) {
   const key = config.tier === "power" ? "power_model" : "fast_model";
   return providerConfig?.[key] ?? config.tier;
 }
-function localDate(d) {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-}
-function localTime(d) {
-  const h = String(d.getHours()).padStart(2, "0");
-  const min = String(d.getMinutes()).padStart(2, "0");
-  return `${h}:${min}`;
-}
 
 // src/cli/run.ts
 var PHASE_PROMPTS = {
@@ -4272,8 +4287,8 @@ async function runCommand(phase, options) {
   if (options.tier) config.tier = options.tier;
   const model = resolveModel(config);
   const timeout = resolveTimeout(config);
-  const promptFile = join16(gardenerDir, "prompts", PHASE_PROMPTS[resolvedPhase]);
-  const contextFile = join16(gardenerDir, "context.md");
+  const promptFile = join17(gardenerDir, "prompts", PHASE_PROMPTS[resolvedPhase]);
+  const contextFile = join17(gardenerDir, "context.md");
   const logger = await createLogger(gardenerDir, { verbose: options.verbose });
   logger.info("run_start", { phase: resolvedPhase, provider: config.provider, model });
   if (options.validate || !options.force) {
@@ -4426,7 +4441,7 @@ Provider exited with code ${result2.exitCode}`));
       await generateDigest2(cwd, { weekly: (/* @__PURE__ */ new Date()).getDay() === 0 });
     } catch {
     }
-    const lastRunPath = join16(gardenerDir, "last-run.md");
+    const lastRunPath = join17(gardenerDir, "last-run.md");
     const lastRunContent = `---
 date: ${metrics.date}
 timestamp: ${metrics.timestamp}
@@ -4483,27 +4498,27 @@ async function loadProvider(name, config) {
 
 // src/cli/start.ts
 init_config2();
-import { readFile as readFile12 } from "fs/promises";
-import { join as join20 } from "path";
+import { readFile as readFile13 } from "fs/promises";
+import { join as join21 } from "path";
 import chalk7 from "chalk";
 
 // src/scheduler/daemon.ts
-import { writeFile as writeFile11, readFile as readFile11, unlink as unlink3, rename as rename7 } from "fs/promises";
-import { join as join17 } from "path";
+import { writeFile as writeFile11, readFile as readFile12, unlink as unlink3, rename as rename6 } from "fs/promises";
+import { join as join18 } from "path";
 import { fork } from "child_process";
 import { fileURLToPath } from "url";
 var HEALTH_FILE = ".daemon-health";
 var HEALTH_STALE_MS = 5 * 60 * 1e3;
 function healthPath(gardenerDir) {
-  return join17(gardenerDir, HEALTH_FILE);
+  return join18(gardenerDir, HEALTH_FILE);
 }
 async function writeDaemonHealth(gardenerDir, health) {
   const tmpFile = healthPath(gardenerDir) + ".tmp";
   await writeFile11(tmpFile, JSON.stringify(health, null, 2), "utf-8");
-  await rename7(tmpFile, healthPath(gardenerDir));
+  await rename6(tmpFile, healthPath(gardenerDir));
 }
 async function startDaemon(vaultPath, cronExpression) {
-  const daemonScript = join17(
+  const daemonScript = join18(
     fileURLToPath(import.meta.url),
     "..",
     "..",
@@ -4520,8 +4535,8 @@ async function startDaemon(vaultPath, cronExpression) {
   });
   child.unref();
   const pid = child.pid;
-  const gardenerDir = join17(vaultPath, ".gardener");
-  const pidFile = join17(gardenerDir, ".daemon-pid");
+  const gardenerDir = join18(vaultPath, ".gardener");
+  const pidFile = join18(gardenerDir, ".daemon-pid");
   await writeFile11(pidFile, String(pid), "utf-8");
   await writeDaemonHealth(gardenerDir, {
     pid,
@@ -4535,7 +4550,7 @@ async function startDaemon(vaultPath, cronExpression) {
 
 // src/scheduler/launchd.ts
 import { writeFile as writeFile12 } from "fs/promises";
-import { join as join18 } from "path";
+import { join as join19 } from "path";
 import { homedir } from "os";
 import { createHash } from "crypto";
 async function generateLaunchdPlist(vaultPath, cronExpression) {
@@ -4558,14 +4573,14 @@ async function generateLaunchdPlist(vaultPath, cronExpression) {
   <key>StartInterval</key>
   <integer>${interval}</integer>
   <key>StandardOutPath</key>
-  <string>${join18(vaultPath, ".gardener", "logs", "launchd-stdout.log")}</string>
+  <string>${join19(vaultPath, ".gardener", "logs", "launchd-stdout.log")}</string>
   <key>StandardErrorPath</key>
-  <string>${join18(vaultPath, ".gardener", "logs", "launchd-stderr.log")}</string>
+  <string>${join19(vaultPath, ".gardener", "logs", "launchd-stderr.log")}</string>
   <key>RunAtLoad</key>
   <true/>
 </dict>
 </plist>`;
-  const plistPath = join18(
+  const plistPath = join19(
     homedir(),
     "Library",
     "LaunchAgents",
@@ -4589,12 +4604,12 @@ function parseCronToSeconds(cron) {
 
 // src/scheduler/systemd.ts
 import { writeFile as writeFile13, mkdir as mkdir9 } from "fs/promises";
-import { join as join19 } from "path";
+import { join as join20 } from "path";
 import { homedir as homedir2 } from "os";
 import { createHash as createHash2 } from "crypto";
 async function generateSystemdUnit(vaultPath, cronExpression) {
   const interval = parseCronToOnCalendar(cronExpression);
-  const unitDir = join19(homedir2(), ".config", "systemd", "user");
+  const unitDir = join20(homedir2(), ".config", "systemd", "user");
   await mkdir9(unitDir, { recursive: true });
   const service = `[Unit]
 Description=Vault Gardener \u2014 AI-powered vault maintenance
@@ -4604,8 +4619,8 @@ After=network.target
 Type=oneshot
 WorkingDirectory=${vaultPath}
 ExecStart=npx vault-gardener run all
-StandardOutput=append:${join19(vaultPath, ".gardener", "logs", "systemd.log")}
-StandardError=append:${join19(vaultPath, ".gardener", "logs", "systemd-error.log")}
+StandardOutput=append:${join20(vaultPath, ".gardener", "logs", "systemd.log")}
+StandardError=append:${join20(vaultPath, ".gardener", "logs", "systemd-error.log")}
 
 [Install]
 WantedBy=default.target
@@ -4621,8 +4636,8 @@ Persistent=true
 WantedBy=timers.target
 `;
   const suffix = vaultHash2(vaultPath);
-  const servicePath = join19(unitDir, `vault-gardener-${suffix}.service`);
-  const timerPath = join19(unitDir, `vault-gardener-${suffix}.timer`);
+  const servicePath = join20(unitDir, `vault-gardener-${suffix}.service`);
+  const timerPath = join20(unitDir, `vault-gardener-${suffix}.timer`);
   await writeFile13(servicePath, service, "utf-8");
   await writeFile13(timerPath, timer, "utf-8");
   return servicePath;
@@ -4675,9 +4690,9 @@ async function startCommand(options) {
     }
     return;
   }
-  const pidFile = join20(gardenerDir, ".daemon-pid");
+  const pidFile = join21(gardenerDir, ".daemon-pid");
   try {
-    const pid2 = parseInt(await readFile12(pidFile, "utf-8"), 10);
+    const pid2 = parseInt(await readFile13(pidFile, "utf-8"), 10);
     process.kill(pid2, 0);
     console.log(chalk7.yellow(`Daemon already running (PID: ${pid2})`));
     return;
@@ -4691,14 +4706,14 @@ async function startCommand(options) {
 
 // src/cli/stop.ts
 init_config2();
-import { readFile as readFile13, unlink as unlink4 } from "fs/promises";
-import { join as join21 } from "path";
+import { readFile as readFile14, unlink as unlink4 } from "fs/promises";
+import { join as join22 } from "path";
 import chalk8 from "chalk";
 async function stopCommand() {
   const gardenerDir = getGardenerDir(process.cwd());
-  const pidFile = join21(gardenerDir, ".daemon-pid");
+  const pidFile = join22(gardenerDir, ".daemon-pid");
   try {
-    const pid = parseInt(await readFile13(pidFile, "utf-8"), 10);
+    const pid = parseInt(await readFile14(pidFile, "utf-8"), 10);
     try {
       process.kill(pid, "SIGTERM");
       console.log(chalk8.green(`Gardener stopped (PID: ${pid})`));
@@ -4716,8 +4731,8 @@ async function stopCommand() {
 init_config2();
 init_collector();
 init_lock();
-import { readFile as readFile14 } from "fs/promises";
-import { join as join22 } from "path";
+import { readFile as readFile15 } from "fs/promises";
+import { join as join23 } from "path";
 import chalk9 from "chalk";
 async function statusCommand(options) {
   const cwd = process.cwd();
@@ -4734,8 +4749,8 @@ async function statusCommand(options) {
   const latestReport = await readLatestReport(gardenerDir);
   let daemonPid = null;
   try {
-    const pidFile = join22(gardenerDir, ".daemon-pid");
-    const pid = parseInt(await readFile14(pidFile, "utf-8"), 10);
+    const pidFile = join23(gardenerDir, ".daemon-pid");
+    const pid = parseInt(await readFile15(pidFile, "utf-8"), 10);
     process.kill(pid, 0);
     daemonPid = pid;
   } catch {
@@ -4747,8 +4762,8 @@ async function statusCommand(options) {
       let suggestions = [];
       let lastDigest = null;
       try {
-        const digestPath = join22(gardenerDir, "digest.json");
-        const digestRaw = await readFile14(digestPath, "utf-8");
+        const digestPath = join23(gardenerDir, "digest.json");
+        const digestRaw = await readFile15(digestPath, "utf-8");
         const digest = JSON.parse(digestRaw);
         suggestions = digest.suggestions ?? [];
         lastDigest = digest.generated ?? null;

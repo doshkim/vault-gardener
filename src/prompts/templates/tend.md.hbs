@@ -49,6 +49,71 @@ New topic categories auto-created when {{auto_grow.resources}}+ notes share keyw
 
 **Batch limit:** Max {{limits.organize_per_run}} files organized per run.
 
+{{#if features.todo_lifecycle}}
+---
+
+## Step 1.5 — Todo Lifecycle Management
+
+Manage the lifecycle of `- [ ]` action items across daily, weekly, and monthly journals.
+One canonical checkbox per todo at any time — items carry forward with gentle accountability.
+
+**Scope:** Only `- [ ]` items in daily journal body text and `## Action Items` sections of event journals (meetings).
+**Excluded:** Items inside `## Store`, `## Commitments`, `## Open Questions`, or `## Goals` sections (these have their own lifecycle systems).
+
+### 1.5.1 — Reconciliation Sweep
+
+Read memory's `## Todo Lifecycle` section (if it exists). For each tracked forward:
+1. Check the origin file — if it now shows `- [x]` (user re-added checkbox and completed), mark resolved
+2. Check the destination file — if it shows `- [x]`, mark resolved
+3. Update memory: move resolved items from `### Active Forwards` to `### Recently Resolved`
+
+### 1.5.2 — Forward from Dailies
+
+Scan daily and event journals from completed weeks. For each in-scope `- [ ]` item:
+
+**Dated items (have `due: YYYY-MM-DD`):**
+- If 3+ days past due → forward to weekly
+
+**Undated items:**
+- If the item's week has ended → forward to weekly
+
+**Forwarding action:**
+1. In the origin file: remove the checkbox, add italic forwarding note:
+   `- Send requirements to Jane — *carried forward to [[YYYY-WNN]]*`
+2. In the weekly's `## Carrying Forward` section, add:
+   `- [ ] Send requirements to Jane — from [[origin-date]] (due: YYYY-MM-DD)`
+
+**Deduplication:** Before adding to any destination, check for an existing item with the same `from [[...]]` origin. If found, update the week counter instead of duplicating.
+
+### 1.5.3 — Weekly-to-Weekly Forwarding
+
+For each `- [ ]` item in the previous weekly's `## Carrying Forward` section:
+1. In the old weekly: remove the checkbox, add forwarding note:
+   `- Send requirements to Jane — *carried forward to [[YYYY-WNN]]*`
+2. In the new weekly's `## Carrying Forward`, add with incremented week counter:
+   `- [ ] Send requirements to Jane — from [[origin-date]] (due: YYYY-MM-DD, week N)`
+
+### 1.5.4 — Staleness Escalation
+
+{{#if (eq persona "analytical")}}Tone: Terse. State facts: "Carrying forward: 3 items. Oldest: 2 weeks."{{/if}}
+{{#if (eq persona "reflective")}}Tone: Thoughtful. "Three items have been traveling with you. Worth asking: which still matter?"{{/if}}
+{{#if (eq persona "coach")}}Tone: Prescriptive. "3 items carrying forward. Recommend blocking time for the oldest two."{{/if}}
+
+| Week Count | Action |
+|-----------|--------|
+| week 3 | Add `> [!question] Still relevant? This item has been carrying forward for 3 weeks.` callout above the item |
+| week 4 | Remove from weekly. Add to monthly journal's `## Long-Running Items` section |
+| week 6 | Strikethrough in monthly: `- ~~Send requirements to Jane~~ — dropped after 6 weeks (from [[origin-date]])`. Remove from memory |
+
+{{#if features.commitment_tracker}}
+### Commitment Cross-Reference
+
+When both `todo_lifecycle` and `commitment_tracker` are enabled, add an `> [!info] Commitment check` callout in the weekly listing overdue commitments from person notes — summary only, no duplicate checkboxes.
+{{/if}}
+
+**Batch limit:** Max 20 todo lifecycle operations per run.
+
+{{/if}}
 ---
 
 ## Step 2 — Journal Generation
@@ -59,7 +124,7 @@ Generate higher-level journal summaries when threshold data exists.
 - **Trigger**: 3+ daily entries exist for the week
 - **Location**: `{{folders.journal}}/YYYY/{{journal.journal_subfolders.weekly}}/YYYY-WNN.md`
 - **Style**: {{journal.style.weekly}}
-- **Sections**: Highlights, Decisions, Learnings, People, Open Items for Next Week
+- **Sections**: Highlights, Decisions, Learnings, People, {{#if features.todo_lifecycle}}Carrying Forward{{else}}Open Items for Next Week{{/if}}
 - **Links**: Back-links to each daily + event journal
 
 ### Monthly Summary

@@ -1,5 +1,7 @@
 import { readdir, access } from 'node:fs/promises';
 import { join, extname } from 'node:path';
+import { SKIP_DIRS } from '../constants.js';
+import { walkMarkdownFiles } from '../utils/fs.js';
 
 export interface FolderMap {
   inbox?: string;
@@ -57,15 +59,11 @@ const FLAT_FOLDERS = ['inbox', 'notes', 'archive'];
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}\.md$/;
 const YEAR_RE = /^(20\d{2})$/;
 
-const SKIP_DIRS = new Set([
-  'node_modules',
-  '.git',
-  '.obsidian',
-  '.logseq',
-  '.foam',
-  '.trash',
-  '.gardener',
-]);
+/** Minimum confidence score to consider a preset match valid. */
+const MIN_PRESET_CONFIDENCE = 0.2;
+
+/** Minimum ratio of ISO-dated files to consider the pattern 'iso-date'. */
+const ISO_DATE_NAMING_THRESHOLD = 0.5;
 
 async function exists(path: string): Promise<boolean> {
   try {
@@ -74,33 +72,6 @@ async function exists(path: string): Promise<boolean> {
   } catch {
     return false;
   }
-}
-
-const COUNT_MAX_FILES = 50_000;
-
-async function countMarkdownFiles(dir: string, state = { count: 0 }): Promise<number> {
-  if (state.count >= COUNT_MAX_FILES) return state.count;
-
-  let entries;
-  try {
-    entries = await readdir(dir, { withFileTypes: true });
-  } catch {
-    return state.count;
-  }
-
-  for (const entry of entries) {
-    if (state.count >= COUNT_MAX_FILES) break;
-    if (entry.name.startsWith('.') || SKIP_DIRS.has(entry.name)) continue;
-
-    const fullPath = join(dir, entry.name);
-    if (entry.isDirectory()) {
-      await countMarkdownFiles(fullPath, state);
-    } else if (entry.isFile() && extname(entry.name) === '.md') {
-      state.count++;
-    }
-  }
-
-  return state.count;
 }
 
 async function detectTool(vaultPath: string): Promise<string | null> {
@@ -185,7 +156,7 @@ function scorePreset(
   scores.sort((a, b) => b.confidence - a.confidence);
   const best = scores[0];
 
-  if (best.confidence < 0.2) {
+  if (best.confidence < MIN_PRESET_CONFIDENCE) {
     return { preset: null, confidence: 0 };
   }
 
@@ -253,7 +224,7 @@ async function detectJournalStructure(
   const mdFiles = await collectJournalFiles(journalDir, 3);
   if (mdFiles.length > 0) {
     const isoCount = mdFiles.filter((f) => ISO_DATE_RE.test(f)).length;
-    if (isoCount / mdFiles.length > 0.5) {
+    if (isoCount / mdFiles.length > ISO_DATE_NAMING_THRESHOLD) {
       result.namingPattern = 'iso-date';
     } else if (mdFiles.length > 0) {
       result.namingPattern = 'custom';
@@ -305,7 +276,8 @@ export async function scanVault(vaultPath: string): Promise<VaultScanResult> {
   const detected = detectFolders(topLevelDirs);
   const { preset, confidence } = scorePreset(detected, topLevelDirs);
   const tool = await detectTool(vaultPath);
-  const totalNotes = await countMarkdownFiles(vaultPath);
+  const walkResult = await walkMarkdownFiles(vaultPath);
+  const totalNotes = walkResult.files.length;
   const journalStructure = await detectJournalStructure(vaultPath, detected);
 
   return {

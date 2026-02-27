@@ -24,6 +24,7 @@ export const FEATURE_PHASE_MAP: Record<string, string[]> = {
   enrichment_priority: ['tend'],
   context_anchoring: ['tend'],
   auto_summary: ['tend'],
+  todo_lifecycle: ['tend'],
 };
 
 /** Return feature keys that are enabled and belong to the given phase. */

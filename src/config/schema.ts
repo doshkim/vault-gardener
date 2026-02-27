@@ -49,33 +49,12 @@ export const DEFAULT_RESILIENCE: ResilienceConfig = {
   preflight_enabled: true,
 };
 
-export interface FeaturesConfig {
-  memory: boolean;
-  entity_auto_linking: boolean;
-  question_tracker: boolean;
-  context_anchoring: boolean;
-  meeting_enhancement: boolean;
-  auto_summary: boolean;
-  backlink_context: boolean;
-  transitive_links: boolean;
-  co_mention_network: boolean;
-  belief_trajectory: boolean;
-  theme_detection: boolean;
-  attention_allocation: boolean;
-  knowledge_gaps: boolean;
-  seasonal_patterns: boolean;
-  goal_tracking: boolean;
-  commitment_tracker: boolean;
-  this_time_last_year: boolean;
-  tag_normalization: boolean;
-  persona: boolean;
-  changelog: boolean;
-  adaptive_batch_sizing: boolean;
-  enrichment_priority: boolean;
-  social_content: boolean;
-}
-
-export const FEATURE_KEYS = Object.keys({
+/**
+ * Single source of truth for feature flags.
+ * Add new features here — FeaturesConfig, FEATURE_KEYS, and DEFAULT_FEATURES
+ * are all derived from this object.
+ */
+const FEATURE_DEFAULTS = {
   memory: true,
   entity_auto_linking: true,
   question_tracker: true,
@@ -99,33 +78,14 @@ export const FEATURE_KEYS = Object.keys({
   adaptive_batch_sizing: true,
   enrichment_priority: true,
   social_content: true,
-} satisfies FeaturesConfig) as (keyof FeaturesConfig)[];
+  todo_lifecycle: true,
+} as const satisfies Record<string, boolean>;
 
-export const DEFAULT_FEATURES: FeaturesConfig = {
-  memory: true,
-  entity_auto_linking: true,
-  question_tracker: true,
-  context_anchoring: true,
-  meeting_enhancement: true,
-  auto_summary: true,
-  backlink_context: true,
-  transitive_links: true,
-  co_mention_network: true,
-  belief_trajectory: true,
-  theme_detection: true,
-  attention_allocation: true,
-  knowledge_gaps: true,
-  seasonal_patterns: true,
-  goal_tracking: true,
-  commitment_tracker: true,
-  this_time_last_year: true,
-  tag_normalization: true,
-  persona: true,
-  changelog: true,
-  adaptive_batch_sizing: true,
-  enrichment_priority: true,
-  social_content: true,
-};
+export type FeaturesConfig = { -readonly [K in keyof typeof FEATURE_DEFAULTS]: boolean };
+
+export const FEATURE_KEYS = Object.keys(FEATURE_DEFAULTS) as (keyof FeaturesConfig)[];
+
+export const DEFAULT_FEATURES: FeaturesConfig = { ...FEATURE_DEFAULTS };
 
 export type Persona = 'analytical' | 'reflective' | 'coach';
 

@@ -915,3 +915,80 @@ describe('Run Report section', () => {
     expect(seed).toContain('"phase": "seed"');
   });
 });
+
+// ===========================================================================
+// H. Todo lifecycle feature tests
+// ===========================================================================
+
+describe('Feature toggle — todo_lifecycle', () => {
+  test('ON: todo lifecycle sections present in tend', async () => {
+    const config = buildDefaultConfig();
+    await renderAll(tmpDir, config);
+    const { tend } = await readRendered(tmpDir);
+
+    expect(tend).toContain('Todo Lifecycle Management');
+    expect(tend).toContain('Carrying Forward');
+    expect(tend).toContain('Reconciliation Sweep');
+  });
+
+  test('OFF: todo lifecycle sections absent from tend', async () => {
+    const config = buildDefaultConfig({ features: { ...DEFAULT_FEATURES, todo_lifecycle: false } });
+    await renderAll(tmpDir, config);
+    const { tend } = await readRendered(tmpDir);
+
+    expect(tend).not.toContain('Todo Lifecycle Management');
+  });
+
+  test('ON: weekly section uses "Carrying Forward" not "Open Items for Next Week"', async () => {
+    const config = buildDefaultConfig();
+    await renderAll(tmpDir, config);
+    const { tend } = await readRendered(tmpDir);
+
+    expect(tend).toContain('Carrying Forward');
+    expect(tend).not.toContain('Open Items for Next Week');
+  });
+
+  test('OFF: weekly section uses "Open Items for Next Week"', async () => {
+    const config = buildDefaultConfig({ features: { ...DEFAULT_FEATURES, todo_lifecycle: false } });
+    await renderAll(tmpDir, config);
+    const { tend } = await readRendered(tmpDir);
+
+    expect(tend).toContain('Open Items for Next Week');
+  });
+
+  test('ON: run report includes todo_lifecycle feature', async () => {
+    const config = buildDefaultConfig();
+    await renderAll(tmpDir, config);
+    const { tend } = await readRendered(tmpDir);
+
+    expect(tend).toContain('`todo_lifecycle`');
+  });
+
+  test('OFF: run report excludes todo_lifecycle feature', async () => {
+    const config = buildDefaultConfig({ features: { ...DEFAULT_FEATURES, todo_lifecycle: false } });
+    await renderAll(tmpDir, config);
+    const { tend } = await readRendered(tmpDir);
+
+    const reportSection = tend.split('## Run Report')[1]?.split('## Output')[0] ?? '';
+    expect(reportSection).not.toContain('`todo_lifecycle`');
+  });
+
+  test('ON: memory update includes Todo Lifecycle section', async () => {
+    const config = buildDefaultConfig();
+    await renderAll(tmpDir, config);
+    const { tend } = await readRendered(tmpDir);
+
+    expect(tend).toContain('## Todo Lifecycle');
+    expect(tend).toContain('### Active Forwards');
+    expect(tend).toContain('### Recently Resolved');
+  });
+
+  test('OFF: memory update excludes Todo Lifecycle section', async () => {
+    const config = buildDefaultConfig({ features: { ...DEFAULT_FEATURES, todo_lifecycle: false } });
+    await renderAll(tmpDir, config);
+    const { tend } = await readRendered(tmpDir);
+
+    expect(tend).not.toContain('## Todo Lifecycle');
+    expect(tend).not.toContain('### Active Forwards');
+  });
+});

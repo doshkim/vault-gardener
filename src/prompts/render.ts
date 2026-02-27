@@ -10,6 +10,26 @@ import type { GardenerConfig } from '../config/index.js';
 Handlebars.registerHelper('eq', (a: unknown, b: unknown) => a === b);
 
 // ---------------------------------------------------------------------------
+// Shared template blocks — interpolated into multiple templates via JS to
+// avoid maintaining identical Handlebars blocks in multiple places.
+// ---------------------------------------------------------------------------
+
+const PERSONA_BLOCK = `{{#if features.persona}}
+## Persona
+
+{{#if (eq persona "analytical")}}You are an **analytical** gardener. Focus on facts, data, and minimal interpretation. Be precise, structured, and evidence-based. Avoid speculation.{{/if}}
+{{#if (eq persona "reflective")}}You are a **reflective** gardener. Ask questions, explore deeper meaning, and surface connections. Balance structure with thoughtful commentary.{{/if}}
+{{#if (eq persona "coach")}}You are a **coaching** gardener. Be prescriptive and action-oriented. Frame observations as recommendations. Push for clarity and commitment.{{/if}}
+
+{{/if}}`;
+
+const SAFETY_BLOCK = `## Safety
+
+- **Never delete** — only reorganize, enrich, connect
+- **Skip recently modified** — if file modified in last 5 min, skip it
+- **Never touch protected paths**: {{#each protected}}\`{{this}}/\` {{/each}}`;
+
+// ---------------------------------------------------------------------------
 // Embedded Handlebars templates
 // These are the source-of-truth templates that get rendered to .gardener/prompts/
 // at runtime. The .hbs files in src/prompts/templates/ are kept for reference
@@ -170,14 +190,7 @@ Run the full vault gardener. Three phases execute in sequence:
 
 **No information is ever deleted** — only reorganized, enriched, and connected.
 
-{{#if features.persona}}
-## Persona
-
-{{#if (eq persona "analytical")}}You are an **analytical** gardener. Focus on facts, data, and minimal interpretation. Be precise, structured, and evidence-based. Avoid speculation.{{/if}}
-{{#if (eq persona "reflective")}}You are a **reflective** gardener. Ask questions, explore deeper meaning, and surface connections. Balance structure with thoughtful commentary.{{/if}}
-{{#if (eq persona "coach")}}You are a **coaching** gardener. Be prescriptive and action-oriented. Frame observations as recommendations. Push for clarity and commitment.{{/if}}
-
-{{/if}}
+${PERSONA_BLOCK}
 {{#if features.memory}}
 ## Memory
 
@@ -236,14 +249,7 @@ structured episodic and semantic memories.
 
 **No information is ever deleted** — only reorganized, enriched, and connected.
 
-{{#if features.persona}}
-## Persona
-
-{{#if (eq persona "analytical")}}You are an **analytical** gardener. Focus on facts, data, and minimal interpretation. Be precise, structured, and evidence-based. Avoid speculation.{{/if}}
-{{#if (eq persona "reflective")}}You are a **reflective** gardener. Ask questions, explore deeper meaning, and surface connections. Balance structure with thoughtful commentary.{{/if}}
-{{#if (eq persona "coach")}}You are a **coaching** gardener. Be prescriptive and action-oriented. Frame observations as recommendations. Push for clarity and commitment.{{/if}}
-
-{{/if}}
+${PERSONA_BLOCK}
 {{#if features.memory}}
 ## Memory
 
@@ -254,11 +260,7 @@ what was done, what was deferred, running observations about vault state. Use th
 - Make strategic decisions about what to prioritize this run
 
 {{/if}}
-## Safety
-
-- **Never delete** — only reorganize, enrich, connect
-- **Skip recently modified** — if file modified in last 5 min, skip it
-- **Never touch protected paths**: {{#each protected}}\`{{this}}/\` {{/each}}
+${SAFETY_BLOCK}
 
 ## Instructions
 
@@ -392,6 +394,7 @@ Only add once per daily note. Skip if a \`[!calendar] This Time Last Year\` call
 
    **Encounter (type: meeting):**
    - Add \`## Action Items\` with checkboxes: \`- [ ] {action} — @{owner} (due: {date})\`
+   - **Dedup:** Before creating any \`- [ ]\` action item, check this week's daily journals AND the current weekly journal for matching items (same text or same \`from [[...]]\` origin). Skip creation if a match exists.
    - Add \`## Key Quotes\` attributed to attendees
    - Add \`## Follow-up Required\` with timeline
    - Link to relevant \`{{folders.people}}/\` and \`{{folders.orgs}}/\` notes
@@ -418,6 +421,7 @@ Only add once per daily note. Skip if a \`[!calendar] This Time Last Year\` call
    \`\`\`
    **Important:** Check the person note's existing commitments and open todo lists in the vault
    to avoid duplicating items already tracked elsewhere.
+   **Dedup:** Before creating any \`- [ ]\` commitment, check this week's daily journals AND the current weekly journal for matching items (same text or same \`from [[...]]\` origin). Skip creation if a match exists.
 
 {{/if}}
 7. **Link from daily note** under \`## Events\`
@@ -585,14 +589,7 @@ extraction, MOC generation, and semantic linking.
 
 **No information is ever deleted** — only reorganized, enriched, and connected.
 
-{{#if features.persona}}
-## Persona
-
-{{#if (eq persona "analytical")}}You are an **analytical** gardener. Focus on facts, data, and minimal interpretation. Be precise, structured, and evidence-based. Avoid speculation.{{/if}}
-{{#if (eq persona "reflective")}}You are a **reflective** gardener. Ask questions, explore deeper meaning, and surface connections. Balance structure with thoughtful commentary.{{/if}}
-{{#if (eq persona "coach")}}You are a **coaching** gardener. Be prescriptive and action-oriented. Frame observations as recommendations. Push for clarity and commitment.{{/if}}
-
-{{/if}}
+${PERSONA_BLOCK}
 {{#if features.memory}}
 ## Memory
 
@@ -602,11 +599,7 @@ Read \`.gardener/memory.md\` if it exists. Use previous run context to:
 - Prioritize areas flagged in previous runs
 
 {{/if}}
-## Safety
-
-- **Never delete** — only reorganize, enrich, connect
-- **Skip recently modified** — if file modified in last 5 min, skip it
-- **Never touch protected paths**: {{#each protected}}\`{{this}}/\` {{/each}}
+${SAFETY_BLOCK}
 
 ## Instructions
 
@@ -951,14 +944,7 @@ enrich sparse notes. Pruning, organizing, and nurturing the knowledge garden.
 
 **No information is ever deleted** — only reorganized, enriched, and connected.
 
-{{#if features.persona}}
-## Persona
-
-{{#if (eq persona "analytical")}}You are an **analytical** gardener. Focus on facts, data, and minimal interpretation. Be precise, structured, and evidence-based. Avoid speculation.{{/if}}
-{{#if (eq persona "reflective")}}You are a **reflective** gardener. Ask questions, explore deeper meaning, and surface connections. Balance structure with thoughtful commentary.{{/if}}
-{{#if (eq persona "coach")}}You are a **coaching** gardener. Be prescriptive and action-oriented. Frame observations as recommendations. Push for clarity and commitment.{{/if}}
-
-{{/if}}
+${PERSONA_BLOCK}
 {{#if features.memory}}
 ## Memory
 
@@ -968,11 +954,7 @@ Read \`.gardener/memory.md\` if it exists. Use previous run context to:
 - Track enrichment queue progress across runs
 
 {{/if}}
-## Safety
-
-- **Never delete** — only reorganize, enrich, connect
-- **Skip recently modified** — if file modified in last 5 min, skip it
-- **Never touch protected paths**: {{#each protected}}\`{{this}}/\` {{/each}}
+${SAFETY_BLOCK}
 
 ## Instructions
 
@@ -1012,6 +994,71 @@ New topic categories auto-created when {{auto_grow.resources}}+ notes share keyw
 
 **Batch limit:** Max {{limits.organize_per_run}} files organized per run.
 
+{{#if features.todo_lifecycle}}
+---
+
+## Step 1.5 — Todo Lifecycle Management
+
+Manage the lifecycle of \`- [ ]\` action items across daily, weekly, and monthly journals.
+One canonical checkbox per todo at any time — items carry forward with gentle accountability.
+
+**Scope:** Only \`- [ ]\` items in daily journal body text and \`## Action Items\` sections of event journals (meetings).
+**Excluded:** Items inside \`## Store\`, \`## Commitments\`, \`## Open Questions\`, or \`## Goals\` sections (these have their own lifecycle systems).
+
+### 1.5.1 — Reconciliation Sweep
+
+Read memory's \`## Todo Lifecycle\` section (if it exists). For each tracked forward:
+1. Check the origin file — if it now shows \`- [x]\` (user re-added checkbox and completed), mark resolved
+2. Check the destination file — if it shows \`- [x]\`, mark resolved
+3. Update memory: move resolved items from \`### Active Forwards\` to \`### Recently Resolved\`
+
+### 1.5.2 — Forward from Dailies
+
+Scan daily and event journals from completed weeks. For each in-scope \`- [ ]\` item:
+
+**Dated items (have \`due: YYYY-MM-DD\`):**
+- If 3+ days past due → forward to weekly
+
+**Undated items:**
+- If the item's week has ended → forward to weekly
+
+**Forwarding action:**
+1. In the origin file: remove the checkbox, add italic forwarding note:
+   \`- Send requirements to Jane — *carried forward to [[YYYY-WNN]]*\`
+2. In the weekly's \`## Carrying Forward\` section, add:
+   \`- [ ] Send requirements to Jane — from [[origin-date]] (due: YYYY-MM-DD)\`
+
+**Deduplication:** Before adding to any destination, check for an existing item with the same \`from [[...]]\` origin. If found, update the week counter instead of duplicating.
+
+### 1.5.3 — Weekly-to-Weekly Forwarding
+
+For each \`- [ ]\` item in the previous weekly's \`## Carrying Forward\` section:
+1. In the old weekly: remove the checkbox, add forwarding note:
+   \`- Send requirements to Jane — *carried forward to [[YYYY-WNN]]*\`
+2. In the new weekly's \`## Carrying Forward\`, add with incremented week counter:
+   \`- [ ] Send requirements to Jane — from [[origin-date]] (due: YYYY-MM-DD, week N)\`
+
+### 1.5.4 — Staleness Escalation
+
+{{#if (eq persona "analytical")}}Tone: Terse. State facts: "Carrying forward: 3 items. Oldest: 2 weeks."{{/if}}
+{{#if (eq persona "reflective")}}Tone: Thoughtful. "Three items have been traveling with you. Worth asking: which still matter?"{{/if}}
+{{#if (eq persona "coach")}}Tone: Prescriptive. "3 items carrying forward. Recommend blocking time for the oldest two."{{/if}}
+
+| Week Count | Action |
+|-----------|--------|
+| week 3 | Add \`> [!question] Still relevant? This item has been carrying forward for 3 weeks.\` callout above the item |
+| week 4 | Remove from weekly. Add to monthly journal's \`## Long-Running Items\` section |
+| week 6 | Strikethrough in monthly: \`- ~~Send requirements to Jane~~ — dropped after 6 weeks (from [[origin-date]])\`. Remove from memory |
+
+{{#if features.commitment_tracker}}
+### Commitment Cross-Reference
+
+When both \`todo_lifecycle\` and \`commitment_tracker\` are enabled, add an \`> [!info] Commitment check\` callout in the weekly listing overdue commitments from person notes — summary only, no duplicate checkboxes.
+{{/if}}
+
+**Batch limit:** Max 20 todo lifecycle operations per run.
+
+{{/if}}
 ---
 
 ## Step 2 — Journal Generation
@@ -1022,7 +1069,7 @@ Generate higher-level journal summaries when threshold data exists.
 - **Trigger**: 3+ daily entries exist for the week
 - **Location**: \`{{folders.journal}}/YYYY/{{journal.journal_subfolders.weekly}}/YYYY-WNN.md\`
 - **Style**: {{journal.style.weekly}}
-- **Sections**: Highlights, Decisions, Learnings, People, Open Items for Next Week
+- **Sections**: Highlights, Decisions, Learnings, People, {{#if features.todo_lifecycle}}Carrying Forward{{else}}Open Items for Next Week{{/if}}
 - **Links**: Back-links to each daily + event journal
 
 **Additional weekly sections:**
@@ -1257,6 +1304,25 @@ Update \`.gardener/memory.md\` with tend phase results:
 - Last full run: {date}
 \`\`\`
 
+{{#if features.todo_lifecycle}}
+Also update the \`## Todo Lifecycle\` section in memory:
+
+\`\`\`markdown
+## Todo Lifecycle
+### Active Forwards
+| Item | Origin | Current Location | Due | Week |
+|------|--------|-----------------|-----|------|
+| {item text} | [[{origin-date}]] | [[{weekly/monthly}]] | {due-date or —} | {N} |
+
+### Recently Resolved
+| Item | Origin | Resolved In | Resolved Date |
+|------|--------|------------|---------------|
+| {item text} | [[{origin-date}]] | [[{location}]] | {date} |
+\`\`\`
+
+Prune \`### Recently Resolved\` entries older than 2 weeks.
+{{/if}}
+
 This is the final phase — merge all memory sections into a clean file.
 
 ---
@@ -1298,6 +1364,7 @@ Report these features (only report enabled features listed here):
 {{/if}}{{#if features.auto_summary}}- \`auto_summary\` — counts: \`{ "summaries_added": {n} }\`
 {{/if}}{{#if features.question_tracker}}- \`question_tracker\` — counts: \`{ "questions_resolved": {n}, "questions_open": {n} }\`
 {{/if}}{{#if features.commitment_tracker}}- \`commitment_tracker\` — counts: \`{ "commitments_reviewed": {n} }\`
+{{/if}}{{#if features.todo_lifecycle}}- \`todo_lifecycle\` — counts: \`{ "forwarded": {n}, "resolved": {n}, "nudged": {n}, "escalated": {n}, "dropped": {n} }\`
 {{/if}}
 
 Also report core steps as features:

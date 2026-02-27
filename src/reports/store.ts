@@ -1,8 +1,9 @@
-import { readFile, writeFile, readdir, mkdir, rename } from 'node:fs/promises';
+import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { ParsedReport, FeatureReport } from './schema.js';
 import type { RunMetrics } from '../metrics/collector.js';
 import type { GardenerConfig } from '../config/schema.js';
+import { appendJsonArrayFile, readJsonArrayDir, localDate, localTime } from '../utils/fs.js';
 
 // ---------------------------------------------------------------------------
 // JSON archive
@@ -14,25 +15,8 @@ export async function archiveReport(
   report: ParsedReport,
 ): Promise<void> {
   const date = report.timestamp.slice(0, 10);
-  const reportsDir = join(gardenerDir, 'reports');
-  await mkdir(reportsDir, { recursive: true });
-
-  const filePath = join(reportsDir, `${date}.json`);
-  let existing: ParsedReport[] = [];
-
-  try {
-    const raw = await readFile(filePath, 'utf-8');
-    const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed)) existing = parsed;
-  } catch {
-    // file doesn't exist or corrupt — start fresh
-  }
-
-  existing.push(report);
-
-  const tmpFile = filePath + '.tmp';
-  await writeFile(tmpFile, JSON.stringify(existing, null, 2), 'utf-8');
-  await rename(tmpFile, filePath);
+  const filePath = join(gardenerDir, 'reports', `${date}.json`);
+  await appendJsonArrayFile(filePath, report);
 }
 
 /** Read archived reports from the last N days. */
@@ -41,34 +25,8 @@ export async function readReports(
   days = 30,
 ): Promise<ParsedReport[]> {
   const reportsDir = join(gardenerDir, 'reports');
-  let files: string[];
-
-  try {
-    const entries = await readdir(reportsDir);
-    files = entries.filter((f) => f.endsWith('.json')).sort();
-  } catch {
-    return [];
-  }
-
-  if (days > 0) {
-    const cutoff = new Date();
-    cutoff.setDate(cutoff.getDate() - days);
-    const cutoffStr = cutoff.toISOString().slice(0, 10);
-    files = files.filter((f) => f.replace('.json', '') >= cutoffStr);
-  }
-
-  const all: ParsedReport[] = [];
-  for (const file of files) {
-    try {
-      const raw = await readFile(join(reportsDir, file), 'utf-8');
-      const reports = JSON.parse(raw) as ParsedReport[];
-      all.push(...reports);
-    } catch {
-      // skip corrupted files
-    }
-  }
-
-  return all.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+  const reports = await readJsonArrayDir<ParsedReport>(reportsDir, days);
+  return reports.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
 }
 
 /** Read the latest report (newest first). */
@@ -251,17 +209,3 @@ function resolveModelName(config: GardenerConfig): string {
   return (providerConfig?.[key] as string) ?? config.tier;
 }
 
-/** Format date as YYYY-MM-DD in local timezone. */
-function localDate(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
-}
-
-/** Format time as HH:MM in local timezone. */
-function localTime(d: Date): string {
-  const h = String(d.getHours()).padStart(2, '0');
-  const min = String(d.getMinutes()).padStart(2, '0');
-  return `${h}:${min}`;
-}

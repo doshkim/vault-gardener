@@ -102,31 +102,40 @@ interface ResilienceConfig {
     vault_quiet_seconds: number;
     preflight_enabled: boolean;
 }
-interface FeaturesConfig {
-    memory: boolean;
-    entity_auto_linking: boolean;
-    question_tracker: boolean;
-    context_anchoring: boolean;
-    meeting_enhancement: boolean;
-    auto_summary: boolean;
-    backlink_context: boolean;
-    transitive_links: boolean;
-    co_mention_network: boolean;
-    belief_trajectory: boolean;
-    theme_detection: boolean;
-    attention_allocation: boolean;
-    knowledge_gaps: boolean;
-    seasonal_patterns: boolean;
-    goal_tracking: boolean;
-    commitment_tracker: boolean;
-    this_time_last_year: boolean;
-    tag_normalization: boolean;
-    persona: boolean;
-    changelog: boolean;
-    adaptive_batch_sizing: boolean;
-    enrichment_priority: boolean;
-    social_content: boolean;
-}
+/**
+ * Single source of truth for feature flags.
+ * Add new features here — FeaturesConfig, FEATURE_KEYS, and DEFAULT_FEATURES
+ * are all derived from this object.
+ */
+declare const FEATURE_DEFAULTS: {
+    readonly memory: true;
+    readonly entity_auto_linking: true;
+    readonly question_tracker: true;
+    readonly context_anchoring: true;
+    readonly meeting_enhancement: true;
+    readonly auto_summary: true;
+    readonly backlink_context: true;
+    readonly transitive_links: true;
+    readonly co_mention_network: true;
+    readonly belief_trajectory: true;
+    readonly theme_detection: true;
+    readonly attention_allocation: true;
+    readonly knowledge_gaps: true;
+    readonly seasonal_patterns: true;
+    readonly goal_tracking: true;
+    readonly commitment_tracker: true;
+    readonly this_time_last_year: true;
+    readonly tag_normalization: true;
+    readonly persona: true;
+    readonly changelog: true;
+    readonly adaptive_batch_sizing: true;
+    readonly enrichment_priority: true;
+    readonly social_content: true;
+    readonly todo_lifecycle: true;
+};
+type FeaturesConfig = {
+    -readonly [K in keyof typeof FEATURE_DEFAULTS]: boolean;
+};
 type Persona = 'analytical' | 'reflective' | 'coach';
 interface GardenerConfig {
     version: number;

@@ -165,7 +165,7 @@ describe('loadConfig / saveConfig round-trip', () => {
     expect(loaded.features.memory).toBe(true);
     expect(loaded.features.persona).toBe(true);
     // Total key count
-    expect(Object.keys(loaded.features)).toHaveLength(23);
+    expect(Object.keys(loaded.features)).toHaveLength(24);
   });
 
   test('throws when no config exists', async () => {
