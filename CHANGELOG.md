@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.1.7] - 2026-02-27
+
+### Added
+- `todo_lifecycle` feature flag — manages the lifecycle of `- [ ]` action items across daily, weekly, and monthly journals
+- Todo forwarding: unchecked items carry forward from dailies → weeklies → monthlies with `from [[origin]]` links
+- Staleness escalation: 3-week nudge, 4-week monthly escalation, 6-week drop with persona-modulated tone
+- Deduplication via `from [[...]]` origin links (primary) and fuzzy text match (fallback)
+- Weekly section renamed from "Open Items for Next Week" to "Carrying Forward" when feature is enabled
+- Memory tracking with `## Todo Lifecycle` section (active forwards + recently resolved tables)
+- Commitment cross-reference callout when both `todo_lifecycle` and `commitment_tracker` are enabled
+- 8 new tests for todo lifecycle feature toggle, section naming, run report, and memory update
+
+### Changed
+- Features config uses single source of truth — `FEATURE_DEFAULTS` derives type, keys, and defaults (was triple-defined)
+- `SKIP_DIRS` consolidated to shared `src/constants.ts` (was independently defined in 4 files)
+- `walkMarkdownFiles`, `appendJsonArrayFile`, `readJsonArrayDir`, `localDate`, `localTime` extracted to `src/utils/fs.ts`
+- `metrics/collector.ts` reduced from 305 → 187 lines using shared utilities
+- `reports/store.ts` reduced from 267 → 211 lines using shared utilities
+- `scanner/detect.ts` reduced from 319 → 291 lines; magic numbers named as constants
+- Persona and Safety template blocks extracted to shared JS constants (single-site maintenance)
+- Bundle size reduced from 170KB → 167KB
+- 24 feature flags (up from 23)
+
 ## [0.1.5] - 2026-02-22
 
 ### Fixed
