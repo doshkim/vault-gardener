@@ -124,12 +124,13 @@ describe('readLatestReport', () => {
   });
 
   test('returns the most recent report', async () => {
-    const report = makeParsedReport();
+    const now = new Date().toISOString();
+    const report = makeParsedReport({ timestamp: now });
     await archiveReport(gardenerDir, report);
 
     const result = await readLatestReport(gardenerDir);
     expect(result).not.toBeNull();
-    expect(result!.timestamp).toBe('2026-02-22T09:15:00.000Z');
+    expect(result!.timestamp).toBe(now);
   });
 });
 

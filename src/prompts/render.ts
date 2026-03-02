@@ -1065,12 +1065,22 @@ When both \`todo_lifecycle\` and \`commitment_tracker\` are enabled, add an \`> 
 
 Generate higher-level journal summaries when threshold data exists.
 
+{{#if features.todo_lifecycle}}
+> **Todo boundary:** Step 1.5 already handled all todo forwarding and deduplication.
+> Step 2 must NOT create, move, copy, or duplicate any \`- [ ]\` checkbox items.
+> Todos appear in journals only via Step 1.5 mechanisms.
+{{/if}}
+
 ### Weekly Summary
 - **Trigger**: 3+ daily entries exist for the week
 - **Location**: \`{{folders.journal}}/YYYY/{{journal.journal_subfolders.weekly}}/YYYY-WNN.md\`
 - **Style**: {{journal.style.weekly}}
 - **Sections**: Highlights, Decisions, Learnings, People, {{#if features.todo_lifecycle}}Carrying Forward{{else}}Open Items for Next Week{{/if}}
 - **Links**: Back-links to each daily + event journal
+
+{{#if features.todo_lifecycle}}
+> **\`## Carrying Forward\` is populated exclusively by Step 1.5.** When generating a new weekly summary, do NOT independently scan previous weeklies for open \`- [ ]\` items. The section must contain only items that Step 1.5 forwarded. If Step 1.5 forwarded no items, the section should be empty or omitted.
+{{/if}}
 
 **Additional weekly sections:**
 
@@ -1094,6 +1104,10 @@ mark resolved with link to the answering journal. Surface unresolved questions.
 - **Location**: \`{{folders.journal}}/YYYY/{{journal.journal_subfolders.monthly}}/YYYY-MM.md\`
 - **Style**: {{journal.style.monthly}}
 - **Sections**: Highlights, Goal Progress, Key Relationships, Knowledge Growth, Gardener Recommendations
+
+{{#if features.todo_lifecycle}}
+> **No individual todos in monthly summaries.** Do NOT include \`- [ ]\` items from weekly \`## Carrying Forward\` sections. Active todos are managed in weekly notes by Step 1.5. The monthly note's only todo-related section is \`## Long-Running Items\`, populated exclusively by Step 1.5's staleness escalation (week 4+).
+{{/if}}
 
 **Additional monthly sections:**
 

@@ -991,4 +991,53 @@ describe('Feature toggle — todo_lifecycle', () => {
     expect(tend).not.toContain('## Todo Lifecycle');
     expect(tend).not.toContain('### Active Forwards');
   });
+
+  test('ON: Step 2 contains todo boundary guard', async () => {
+    const config = buildDefaultConfig();
+    await renderAll(tmpDir, config);
+    const { tend } = await readRendered(tmpDir);
+
+    expect(tend).toContain('**Todo boundary:**');
+    expect(tend).toContain('Step 2 must NOT create, move, copy, or duplicate any `- [ ]` checkbox items');
+  });
+
+  test('OFF: Step 2 does not contain todo boundary guard', async () => {
+    const config = buildDefaultConfig({ features: { ...DEFAULT_FEATURES, todo_lifecycle: false } });
+    await renderAll(tmpDir, config);
+    const { tend } = await readRendered(tmpDir);
+
+    expect(tend).not.toContain('**Todo boundary:**');
+  });
+
+  test('ON: weekly summary contains Carrying Forward guard', async () => {
+    const config = buildDefaultConfig();
+    await renderAll(tmpDir, config);
+    const { tend } = await readRendered(tmpDir);
+
+    expect(tend).toContain('`## Carrying Forward` is populated exclusively by Step 1.5');
+  });
+
+  test('OFF: weekly summary does not contain Carrying Forward guard', async () => {
+    const config = buildDefaultConfig({ features: { ...DEFAULT_FEATURES, todo_lifecycle: false } });
+    await renderAll(tmpDir, config);
+    const { tend } = await readRendered(tmpDir);
+
+    expect(tend).not.toContain('`## Carrying Forward` is populated exclusively by Step 1.5');
+  });
+
+  test('ON: monthly summary contains no-todos guard', async () => {
+    const config = buildDefaultConfig();
+    await renderAll(tmpDir, config);
+    const { tend } = await readRendered(tmpDir);
+
+    expect(tend).toContain('**No individual todos in monthly summaries.**');
+  });
+
+  test('OFF: monthly summary does not contain no-todos guard', async () => {
+    const config = buildDefaultConfig({ features: { ...DEFAULT_FEATURES, todo_lifecycle: false } });
+    await renderAll(tmpDir, config);
+    const { tend } = await readRendered(tmpDir);
+
+    expect(tend).not.toContain('**No individual todos in monthly summaries.**');
+  });
 });

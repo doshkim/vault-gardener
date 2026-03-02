@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.1.8] - 2026-03-01
+
+### Fixed
+- Duplicate todos across weekly and monthly journals — added Step 2 guard clauses instructing the LLM not to re-add `- [ ]` items already handled by Step 1.5 todo lifecycle
+- Flaky `readLatestReport` test — hardcoded timestamp fell outside the 7-day lookup window as time passed
+
+### Added
+- Todo boundary guard at Step 2 header (prevents any `- [ ]` duplication in journal generation)
+- Weekly `## Carrying Forward` guard (section populated exclusively by Step 1.5)
+- Monthly no-todos guard (no individual `- [ ]` items; only `## Long-Running Items` via staleness escalation)
+- 7 new tests for todo guard clauses (ON/OFF for each guard)
+
 ## [0.1.7] - 2026-02-27
 
 ### Added
