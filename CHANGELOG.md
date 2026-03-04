@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.1.9] - 2026-03-03
+
+### Removed
+- Stale `.hbs` template files — embedded `TEMPLATES` in `render.ts` is the sole source of truth; the `.hbs` files were unused dead code that had diverged from the actual templates
+
+### Added
+- Efficiency instructions in nurture and tend prompts — minimize API round-trips via single-pass processing, batch file operations, and combined reads
+- Single-pass step headers (Triage, Structural Integrity, Linking, Belief Synthesizer) to reinforce batch processing intent
+
 ## [0.1.8] - 2026-03-01
 
 ### Fixed
