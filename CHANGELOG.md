@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.2.0] - 2026-03-03
+
+### Added
+- `events` journal subfolder — event journals (decisions, insights, milestones, encounters, etc.) now route to `01-journal/YYYY/events/` instead of cluttering `daily/`
+- Step 2 migration step in Seed phase — automatically moves legacy event journals from `daily/` to `events/` and updates wiki-links
+- Critical inbox deletion instructions — each inbox processing step now explicitly requires immediate file deletion before proceeding to the next item, preventing duplicate processing
+
+### Changed
+- Large captures path changed from `daily/` to `events/` subfolder
+- Small captures deletion step strengthened with critical wording
+- Large captures deletion step strengthened with critical wording and duplication warning
+
 ## [0.1.9] - 2026-03-03
 
 ### Removed

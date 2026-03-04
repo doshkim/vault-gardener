@@ -14,6 +14,7 @@ export interface JournalConfig {
     monthly: string;
     weekly: string;
     daily: string;
+    events: string;
   };
 }
 
@@ -269,6 +270,7 @@ export function buildDefaultConfig(overrides: Partial<GardenerConfig> = {}): Gar
         monthly: 'monthly',
         weekly: 'weekly',
         daily: 'daily',
+        events: 'events',
       },
     },
     social_platforms: ['twitter', 'linkedin'],

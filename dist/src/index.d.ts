@@ -85,6 +85,7 @@ interface JournalConfig {
         monthly: string;
         weekly: string;
         daily: string;
+        events: string;
     };
 }
 interface ResilienceConfig {

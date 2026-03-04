@@ -302,6 +302,8 @@ Run cleanup on recently modified notes before other maintenance:
 
 **Process ALL inbox items in ONE pass.** For each item: read -> classify -> act (bind/route/tag) -> next item. Do NOT separate triage from routing into multiple vault scans.
 
+**CRITICAL: After processing each inbox item, you MUST delete the original file from \`{{folders.inbox}}/\` immediately. Do NOT proceed to the next item until the inbox file is removed. Leaving processed files in the inbox causes duplicates.**
+
 Classify each \`{{folders.inbox}}/\` item:
 
 **EPISODIC signals** (any match → episodic):
@@ -338,7 +340,7 @@ Process episodic inbox items into journals.
    \`\`\`
    - {content} — [[source-if-any]] ({HH:MM})
    \`\`\`
-3. Delete inbox file
+3. **CRITICAL: Delete the original inbox file immediately.** Do NOT proceed to the next item until the inbox file is removed.
 
 {{#if features.this_time_last_year}}
 ### This Time Last Year (#29)
@@ -385,7 +387,7 @@ Only add once per daily note. Skip if a \`[!calendar] This Time Last Year\` call
    | "won", "closed", "landed" | Win |
    | Default | Observation |
 
-2. **Create event journal**: \`{{folders.journal}}/YYYY/{{journal.journal_subfolders.daily}}/YYYY-MM-DD {Kind} - {Title}.md\`
+2. **Create event journal**: \`{{folders.journal}}/YYYY/{{journal.journal_subfolders.events}}/YYYY-MM-DD {Kind} - {Title}.md\`
 3. **Apply frontmatter**:
    \`\`\`yaml
    ---
@@ -435,7 +437,7 @@ Only add once per daily note. Skip if a \`[!calendar] This Time Last Year\` call
 
 {{/if}}
 7. **Link from daily note** under \`## Events\`
-8. Delete inbox file
+8. **CRITICAL: Delete the original inbox file immediately.** Do NOT proceed to the next item until the inbox file is removed. Leaving processed files in the inbox causes duplicates.
 
 ## Step 1.2 — Salience Tagger
 
@@ -479,6 +481,17 @@ Detect sparse people notes and enrich:
 3. Web search for job title, company, brief bio
 4. Update with attribution banner
 5. Safety: only fill empty sections, never overwrite
+
+---
+
+## Step 2 — Migrate Legacy Event Journals
+
+Move any event journals still in \`{{journal.journal_subfolders.daily}}/\` folders to \`{{journal.journal_subfolders.events}}/\`:
+
+1. Scan \`{{folders.journal}}/YYYY/{{journal.journal_subfolders.daily}}/\` for files whose name is NOT \`YYYY-MM-DD.md\`
+   (i.e., contains "Meeting", "Insight", "Decision", "Milestone", "Encounter", "Win", "Failure", "Observation")
+2. Move each to \`{{folders.journal}}/YYYY/{{journal.journal_subfolders.events}}/\` (create folder if needed)
+3. Update any wiki-links in the daily note that referenced the old path
 
 ---
 
