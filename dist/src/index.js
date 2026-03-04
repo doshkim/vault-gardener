@@ -732,6 +732,15 @@ what was done, what was deferred, running observations about vault state. Use th
 {{/if}}
 ${SAFETY_BLOCK}
 
+## Efficiency
+
+**Minimize API round-trips.** Each tool call is expensive. Follow these rules:
+- **Single-pass inbox processing**: Read ALL inbox files first, classify each, then execute all actions. Do NOT triage in one pass and route in another.
+- **Batch file operations**: When creating/moving multiple files, do them consecutively without re-scanning the vault between each.
+- **Salience tagging during processing**: Tag salience while processing each journal \u2014 do NOT scan journals again in a separate pass.
+- **Combine reads**: When you need to read context.md and memory.md, read them in the same turn.
+- **Avoid redundant listing**: List a directory once and reuse the results, do not re-list.
+
 ## Instructions
 
 Read \`.gardener/context.md\` for vault structure and routing rules.
@@ -760,7 +769,9 @@ Run cleanup on recently modified notes before other maintenance:
 
 ---
 
-## Step 1 \u2014 Triage
+## Step 1 \u2014 Triage (Single Pass)
+
+**Process ALL inbox items in ONE pass.** For each item: read -> classify -> act (bind/route/tag) -> next item. Do NOT separate triage from routing into multiple vault scans.
 
 Classify each \`{{folders.inbox}}/\` item:
 
@@ -899,7 +910,7 @@ Only add once per daily note. Skip if a \`[!calendar] This Time Last Year\` call
 
 ## Step 1.2 \u2014 Salience Tagger
 
-Scan journals modified in last 24h.
+**Apply salience tags during Step 1.1 processing \u2014 do NOT re-scan journals.** For any journal you already touched in the Binder step, tag salience inline. Only scan separately for journals modified in last 24h that were NOT already processed above.
 
 **HIGH salience** \u2192 add \`#salient\`:
 - Explicit tags: \`#salient\`, \`#urgent\`, \`#painful\`, \`#win\`
@@ -1070,13 +1081,24 @@ Read \`.gardener/memory.md\` if it exists. Use previous run context to:
 {{/if}}
 ${SAFETY_BLOCK}
 
+## Efficiency
+
+**Minimize API round-trips.** Each tool call is expensive. Follow these rules:
+- **Single-pass structural checks**: Run ALL integrity checks (orphans, broken links, frontmatter, empty notes) in ONE vault scan. Do NOT scan the vault separately for each check type.
+- **Single-pass knowledge building**: Scan journals with \`## Store\` sections ONCE. Collect all belief candidates, playbook triggers, and MOC candidates in that single scan. Then execute all updates.
+- **Single-pass linking**: Combine entity mention linking, semantic similarity linking, and transitive link suggestions into ONE analysis of recently modified notes. Do NOT re-scan for each link type.
+- **Batch file writes**: When updating multiple notes (e.g., fixing frontmatter on 10 files), do them consecutively without re-listing directories between each.
+- **Combine reads**: Read context.md and memory.md in the same turn.
+
 ## Instructions
 
 Read \`.gardener/context.md\` for vault structure and rules.
 
 ---
 
-## Step 1 \u2014 Structural Integrity Checks
+## Step 1 \u2014 Structural Integrity Checks (Single Pass)
+
+**Run ALL checks below in a single vault scan.** List files once, check all conditions per file, batch all fixes.
 
 - **Root orphans**: Find \`.md\` files in vault root (not in any folder). Move to \`{{folders.inbox}}/\` for triage.
 - **Depth check**: Flag folders nested deeper than 3 levels.
@@ -1131,7 +1153,9 @@ Identify notes with no incoming links (orphans).
 
 ---
 
-## Step 2 \u2014 Belief Synthesizer
+## Step 2 \u2014 Belief Synthesizer (Batch)
+
+**Scan journals ONCE.** Collect ALL Store items, then process them together. Also collect playbook/MOC candidates during this same scan.
 
 Scan all journals with \`## Store\` sections.
 
@@ -1234,8 +1258,12 @@ but have no dedicated note in the vault:
 
 ---
 
+## Step 3 \u2014 Linking (Single Pass)
+
+**Combine entity linking, semantic linking, and transitive suggestions into ONE analysis pass.** Analyze recently modified notes once, find all link opportunities, then write them all.
+
 {{#if features.entity_auto_linking}}
-## Step 3 \u2014 Entity Mention Auto-Linking
+### 3a. Entity Mention Auto-Linking
 
 Scan notes modified in the last 14 days for plain-text mentions of known entities
 (people, organizations, projects) that exist as vault notes but aren't WikiLinked.
@@ -1249,12 +1277,12 @@ Scan notes modified in the last 14 days for plain-text mentions of known entitie
    - Don't link inside code blocks, URLs, or existing WikiLinks
    - Use contextual disambiguation: "Apple" the company vs the fruit \u2014 only link if context
      matches the note's \`type\` frontmatter
-5. **Batch limit:** Max {{limits.links_per_run}} auto-links per run (shared with Step 3.1 below)
+5. **Batch limit:** Max {{limits.links_per_run}} auto-links per run (shared with Step 3b below)
 
 {{/if}}
 ---
 
-## Step 3.1 \u2014 Semantic Similarity Linking
+### 3b. Semantic Similarity Linking
 
 Analyze notes modified in the last 14 days. Find related notes using:
 - **Tag overlap**: 2+ topic-specific tags shared (exclude structural tags)
@@ -1276,10 +1304,10 @@ For each candidate pair with no existing link:
   Only add context for **newly-added links** (don't retroactively annotate existing links).
 {{/if}}
 
-**Limit:** Max {{limits.links_per_run}} new links per run (shared with Step 3 entity linking).
+**Limit:** Max {{limits.links_per_run}} new links per run (shared with Step 3a entity linking).
 
 {{#if features.transitive_links}}
-## Step 3.2 \u2014 Transitive Link Suggestions
+### 3c. Transitive Link Suggestions
 
 If note A links to B and B links to C, but A does not link to C, and A and C share
 tags or keywords, suggest a direct link with the connection path annotated:
@@ -1424,13 +1452,26 @@ Read \`.gardener/memory.md\` if it exists. Use previous run context to:
 {{/if}}
 ${SAFETY_BLOCK}
 
+## Efficiency
+
+**Minimize API round-trips.** Each tool call is expensive. Follow these rules:
+- **Single-pass review**: Scan the vault ONCE for stale notes AND loose resource files. Collect all candidates, then batch-execute actions (review comments, file moves, frontmatter updates).
+- **Batch journal generation**: Check all journal generation triggers (weekly, monthly, quarterly) in one pass. Generate all needed journals consecutively.
+- **Batch enrichment**: Score all enrichment candidates first, then process the top N consecutively without re-scanning between each.
+- **Todo lifecycle in one sweep**: Process all todo forwarding, reconciliation, and escalation in a single pass through the journals.
+- **Combine reads**: Read context.md and memory.md in the same turn.
+
 ## Instructions
 
 Read \`.gardener/context.md\` for vault structure and rules.
 
 ---
 
-## Step 1 \u2014 Stale Note Review
+## Step 1 \u2014 Stale Note Review & Organization (Single Scan)
+
+**Scan the vault ONCE. Collect all stale notes AND loose resource files, then batch-execute all actions.**
+
+### 1a. Stale Notes
 
 Non-destructive review. **Never auto-archive or delete.**
 
@@ -1440,7 +1481,7 @@ Non-destructive review. **Never auto-archive or delete.**
 | \`seed\` + >30 days old | Flag in summary: "Needs attention \u2014 develop or connect." |
 | Event journal with all Store items processed | Set \`status: consolidated\`. |
 
-## Step 1.1 \u2014 Semantic Memory Organizer
+### 1b. Semantic Memory Organizer
 
 Auto-organize \`{{folders.resources}}/\` into topic subfolders.
 
@@ -1533,12 +1574,22 @@ When both \`todo_lifecycle\` and \`commitment_tracker\` are enabled, add an \`> 
 
 Generate higher-level journal summaries when threshold data exists.
 
+{{#if features.todo_lifecycle}}
+> **Todo boundary:** Step 1.5 already handled all todo forwarding and deduplication.
+> Step 2 must NOT create, move, copy, or duplicate any \`- [ ]\` checkbox items.
+> Todos appear in journals only via Step 1.5 mechanisms.
+{{/if}}
+
 ### Weekly Summary
 - **Trigger**: 3+ daily entries exist for the week
 - **Location**: \`{{folders.journal}}/YYYY/{{journal.journal_subfolders.weekly}}/YYYY-WNN.md\`
 - **Style**: {{journal.style.weekly}}
 - **Sections**: Highlights, Decisions, Learnings, People, {{#if features.todo_lifecycle}}Carrying Forward{{else}}Open Items for Next Week{{/if}}
 - **Links**: Back-links to each daily + event journal
+
+{{#if features.todo_lifecycle}}
+> **\`## Carrying Forward\` is populated exclusively by Step 1.5.** When generating a new weekly summary, do NOT independently scan previous weeklies for open \`- [ ]\` items. The section must contain only items that Step 1.5 forwarded. If Step 1.5 forwarded no items, the section should be empty or omitted.
+{{/if}}
 
 **Additional weekly sections:**
 
@@ -1562,6 +1613,10 @@ mark resolved with link to the answering journal. Surface unresolved questions.
 - **Location**: \`{{folders.journal}}/YYYY/{{journal.journal_subfolders.monthly}}/YYYY-MM.md\`
 - **Style**: {{journal.style.monthly}}
 - **Sections**: Highlights, Goal Progress, Key Relationships, Knowledge Growth, Gardener Recommendations
+
+{{#if features.todo_lifecycle}}
+> **No individual todos in monthly summaries.** Do NOT include \`- [ ]\` items from weekly \`## Carrying Forward\` sections. Active todos are managed in weekly notes by Step 1.5. The monthly note's only todo-related section is \`## Long-Running Items\`, populated exclusively by Step 1.5's staleness escalation (week 4+).
+{{/if}}
 
 **Additional monthly sections:**
 
