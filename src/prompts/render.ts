@@ -29,6 +29,24 @@ const SAFETY_BLOCK = `## Safety
 - **Skip recently modified** — if file modified in last 5 min, skip it
 - **Never touch protected paths**: {{#each protected}}\`{{this}}/\` {{/each}}`;
 
+const DAILY_ACTIVITY_LOG_BLOCK = `## Daily Journal Activity Log
+
+After completing ALL phases, append ONE concise summary to today's daily note
+(\`{{folders.journal}}/YYYY/{{journal.journal_subfolders.daily}}/YYYY-MM-DD.md\`) under the \`## Activity Log\` section.
+
+**Format — single bullet, max 3 sentences:**
+\`\`\`markdown
+- Gardener ran {N} phase(s). {1-2 sentences of human-notable highlights: new notes created, MOCs updated, important connections found, inbox items processed}. {key stats: N notes enriched, N links added}.
+\`\`\`
+
+**Rules:**
+- ONE entry per full gardener execution (not per phase)
+- Lead with what a human would care about: new notes, resolved questions, important connections
+- Omit: individual org names (unless personally significant), frontmatter fix details, stale contact lists, technical details like "JS-blocked"
+- Keep detailed run data in \`.gardener/memory.md\` and \`.gardener/changelog.md\` — those are the system logs
+- If nothing notable happened, write: \`- Gardener: maintenance run — {N} notes enriched, {N} links added.\`
+`;
+
 // ---------------------------------------------------------------------------
 // Embedded Handlebars templates
 // These are the source-of-truth templates that get rendered to .gardener/prompts/
@@ -161,6 +179,8 @@ seed → consolidated                          (event journals, after Store item
 {{#if features.memory}}- **Memory file**: \`.gardener/memory.md\` — read at start of each phase, updated at end
 {{/if}}{{#if features.changelog}}- **Changelog**: \`.gardener/changelog.md\` — appended after each phase (last 50 entries)
 {{/if}}
+
+${DAILY_ACTIVITY_LOG_BLOCK}
 
 {{#if features.social_content}}
 ## Social Media Platforms
@@ -599,7 +619,9 @@ Summary:
 - **Routing**: {routed} items routed to folders
 - **People**: {researched} people notes auto-researched
 - **Questions**: {count} substantive questions extracted
-- **Commitments**: {count} commitments tracked on person notes`,
+- **Commitments**: {count} commitments tracked on person notes
+
+**Activity Log:** Also update today's daily note Activity Log per the formatting rules in context.md.`,
 
   // ---------------------------------------------------------------------------
   nurture: `# Nurture — Structure & Knowledge Building
@@ -974,7 +996,9 @@ Summary:
 - **Entity links**: {count} plain-text mentions auto-linked
 - **Semantic links**: {count} new links with context sentences
 - **Transitive links**: {count} suggested
-- **People**: {networks} co-mention networks updated, {commitments} commitments reviewed`,
+- **People**: {networks} co-mention networks updated, {commitments} commitments reviewed
+
+**Activity Log:** Also update today's daily note Activity Log per the formatting rules in context.md.`,
 
   // ---------------------------------------------------------------------------
   tend: `# Tend — Lifecycle & Enrichment
@@ -1457,7 +1481,9 @@ Summary:
 - **Enrichment**: {enriched} notes enriched, {remaining} remaining in queue
 - **Summaries**: {count} TL;DR sections added to long notes
 - **Context**: {count} origin context sections added to sparse notes
-- **Social**: {count} draft posts generated for {{#each social_platforms}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}`,
+- **Social**: {count} draft posts generated for {{#each social_platforms}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}
+
+**Activity Log:** Also update today's daily note Activity Log per the formatting rules in context.md.`,
 };
 
 // ---------------------------------------------------------------------------
