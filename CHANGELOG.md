@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.2.1] - 2026-03-09
+
+### Added
+- Daily activity log — gardener appends a concise summary bullet to the daily journal's `## Activity Log` section after all phases complete
+- Activity log reminders in seed, nurture, and tend phase summaries
+
 ## [0.2.0] - 2026-03-03
 
 ### Added
