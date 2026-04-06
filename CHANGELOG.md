@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.3.0] - 2026-04-06
+
+### Added
+- **Vault index** — persistent `.gardener/index.json` tracks per-file wikilink count, word count, enrichment count, and last gardened date
+- Three over-gardening protections injected into LLM context: cooldown (skip recently gardened files), max enrichment (cap lifetime touches per file), and link density (prevent over-linking)
+- Incremental index builds using mtime diffing; post-run updates via git diff
+- New `vault_index` feature flag (enabled by default)
+- Configurable thresholds: `index.cooldown_days` (default 3), `index.max_enrichments` (default 5), `index.max_wikilink_density` (default 15)
+
 ## [0.2.1] - 2026-03-09
 
 ### Added
