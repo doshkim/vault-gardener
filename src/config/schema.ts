@@ -80,6 +80,7 @@ const FEATURE_DEFAULTS = {
   enrichment_priority: true,
   social_content: true,
   todo_lifecycle: true,
+  vault_index: true,
 } as const satisfies Record<string, boolean>;
 
 export type FeaturesConfig = { -readonly [K in keyof typeof FEATURE_DEFAULTS]: boolean };
@@ -87,6 +88,27 @@ export type FeaturesConfig = { -readonly [K in keyof typeof FEATURE_DEFAULTS]: b
 export const FEATURE_KEYS = Object.keys(FEATURE_DEFAULTS) as (keyof FeaturesConfig)[];
 
 export const DEFAULT_FEATURES: FeaturesConfig = { ...FEATURE_DEFAULTS };
+
+export interface IndexConfig {
+  /** Minimum days between enrichments of the same file */
+  cooldown_days: number;
+  /** Maximum times a file can be enriched across all runs */
+  max_enrichments: number;
+  /** Maximum wikilinks per 1000 words before the note is considered saturated */
+  max_wikilink_density: number;
+  /** Maximum files to scan per index build */
+  max_scan_files: number;
+  /** Timeout in seconds for index build */
+  scan_timeout_seconds: number;
+}
+
+export const DEFAULT_INDEX: IndexConfig = {
+  cooldown_days: 3,
+  max_enrichments: 5,
+  max_wikilink_density: 15,
+  max_scan_files: 50_000,
+  scan_timeout_seconds: 60,
+};
 
 export type Persona = 'analytical' | 'reflective' | 'coach';
 
@@ -116,6 +138,7 @@ export interface GardenerConfig {
   protected: string[];
   resilience: ResilienceConfig;
   features: FeaturesConfig;
+  index: IndexConfig;
 }
 
 export function validateConfig(
@@ -287,6 +310,7 @@ export function buildDefaultConfig(overrides: Partial<GardenerConfig> = {}): Gar
     ],
     resilience: { ...DEFAULT_RESILIENCE },
     features: { ...DEFAULT_FEATURES },
+    index: { ...DEFAULT_INDEX },
     ...overrides,
   };
 }

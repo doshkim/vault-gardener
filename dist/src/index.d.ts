@@ -133,10 +133,23 @@ declare const FEATURE_DEFAULTS: {
     readonly enrichment_priority: true;
     readonly social_content: true;
     readonly todo_lifecycle: true;
+    readonly vault_index: true;
 };
 type FeaturesConfig = {
     -readonly [K in keyof typeof FEATURE_DEFAULTS]: boolean;
 };
+interface IndexConfig {
+    /** Minimum days between enrichments of the same file */
+    cooldown_days: number;
+    /** Maximum times a file can be enriched across all runs */
+    max_enrichments: number;
+    /** Maximum wikilinks per 1000 words before the note is considered saturated */
+    max_wikilink_density: number;
+    /** Maximum files to scan per index build */
+    max_scan_files: number;
+    /** Timeout in seconds for index build */
+    scan_timeout_seconds: number;
+}
 type Persona = 'analytical' | 'reflective' | 'coach';
 interface GardenerConfig {
     version: number;
@@ -177,6 +190,7 @@ interface GardenerConfig {
     protected: string[];
     resilience: ResilienceConfig;
     features: FeaturesConfig;
+    index: IndexConfig;
 }
 
 interface WeeklyBrief {

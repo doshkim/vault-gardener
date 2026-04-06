@@ -123,12 +123,13 @@ const EXPECTED_FEATURE_KEYS: (keyof FeaturesConfig)[] = [
   'knowledge_gaps', 'seasonal_patterns', 'goal_tracking', 'commitment_tracker',
   'this_time_last_year', 'tag_normalization', 'persona', 'changelog',
   'adaptive_batch_sizing', 'enrichment_priority', 'social_content', 'todo_lifecycle',
+  'vault_index',
 ];
 
 describe('DEFAULT_FEATURES', () => {
-  test('has all 24 feature keys', () => {
+  test('has all 25 feature keys', () => {
     const keys = Object.keys(DEFAULT_FEATURES);
-    expect(keys).toHaveLength(24);
+    expect(keys).toHaveLength(25);
   });
 
   test('contains exactly the expected keys', () => {

@@ -1,5 +1,7 @@
 import { join } from 'node:path';
 import { writeFile } from 'node:fs/promises';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
 import chalk from 'chalk';
 import ora from 'ora';
 import {
@@ -16,12 +18,16 @@ import { createLogger } from '../logging/index.js';
 import { runPreflight } from '../preflight/index.js';
 import { notifyFailure } from '../notify/index.js';
 import { collectPreMetrics, collectPostMetrics, writeMetrics } from '../metrics/collector.js';
+import { loadIndex, saveIndex, buildIndex, updateIndexPostRun, generateIndexSummary } from '../index-tracker/index.js';
+import type { IndexSummary } from '../index-tracker/index.js';
 import { formatSummary } from '../metrics/format.js';
 import { parseRunReport, archiveReport, writeGardeningLog } from '../reports/index.js';
 import type { ParsedReport } from '../reports/index.js';
 import type { ProviderName, Tier, RunOptions } from '../providers/types.js';
 import type { GardenerConfig } from '../config/index.js';
 import type { RunMetrics } from '../metrics/collector.js';
+
+const execFileAsync = promisify(execFile);
 
 type Phase = 'seed' | 'nurture' | 'tend' | 'all';
 
@@ -159,11 +165,35 @@ export async function runCommand(
   let exitCode = 0;
 
   try {
+    // Build vault index (incremental)
+    let indexSummary: IndexSummary | undefined;
+    if (config.features.vault_index) {
+      try {
+        const existing = await loadIndex(gardenerDir);
+        const index = await buildIndex(cwd, config.index, existing);
+        await saveIndex(gardenerDir, index);
+        indexSummary = generateIndexSummary(index, config.index);
+      } catch (err) {
+        logger.warn('index_build_failed', { context: { error: (err as Error).message } });
+      }
+    }
+
     // Re-render prompts from config before each run
-    await renderAll(gardenerDir, config);
+    await renderAll(gardenerDir, config, { indexSummary });
 
     // Pre-metrics
     const pre = await collectPreMetrics(cwd, config);
+
+    // Capture pre-run commit for post-run index update
+    let preRunCommit: string | null = null;
+    if (config.features.vault_index) {
+      try {
+        const { stdout } = await execFileAsync('git', ['rev-parse', 'HEAD'], { cwd, timeout: 5000 });
+        preRunCommit = stdout.trim() || null;
+      } catch {
+        // Not a git repo or no commits
+      }
+    }
 
     // Load provider
     const provider = await loadProvider(config.provider, config);
@@ -201,6 +231,19 @@ export async function runCommand(
     // Post-metrics
     const post = await collectPostMetrics(cwd, config, pre);
     const duration = Math.round((Date.now() - startTime) / 1000);
+
+    // Post-run index update
+    if (config.features.vault_index) {
+      try {
+        const index = await loadIndex(gardenerDir);
+        if (index) {
+          const updated = await updateIndexPostRun(cwd, gardenerDir, index, preRunCommit);
+          await saveIndex(gardenerDir, updated);
+        }
+      } catch {
+        logger.warn('index_update_failed');
+      }
+    }
 
     // Parse LLM feature report + write gardening log
     let report: ParsedReport | null = null;

@@ -2,6 +2,11 @@ import Handlebars from 'handlebars';
 import { writeFile, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { GardenerConfig } from '../config/index.js';
+import type { IndexSummary } from '../index-tracker/schema.js';
+
+export interface RenderExtras {
+  indexSummary?: IndexSummary;
+}
 
 // ---------------------------------------------------------------------------
 // Handlebars helpers
@@ -194,6 +199,35 @@ ${DAILY_ACTIVITY_LOG_BLOCK}
 - \`{{this}}/\`
 {{/each}}
 
+{{#if features.vault_index}}
+{{#if _indexSummary}}
+## Vault Index
+
+**Stats:** {{_indexSummary.stats.totalIndexed}} notes indexed, {{_indexSummary.stats.neverGardened}} never gardened, {{_indexSummary.stats.onCooldown}} on cooldown, {{_indexSummary.stats.atMaxEnrichment}} at max enrichment. Avg {{_indexSummary.stats.avgWikilinkCount}} wikilinks/note.
+
+{{#if _indexSummary.cooldownNotes.length}}
+### Recently Gardened — DO NOT enrich, link, or modify:
+{{#each _indexSummary.cooldownNotes}}
+- \`{{this}}\`
+{{/each}}
+{{/if}}
+
+{{#if _indexSummary.maxEnrichmentNotes.length}}
+### Max Enrichment Reached — DO NOT enrich further:
+{{#each _indexSummary.maxEnrichmentNotes}}
+- \`{{this}}\`
+{{/each}}
+{{/if}}
+
+{{#if _indexSummary.highDensityNotes.length}}
+### High Link Density — DO NOT add more wikilinks:
+{{#each _indexSummary.highDensityNotes}}
+- \`{{this}}\`
+{{/each}}
+{{/if}}
+
+{{/if}}
+{{/if}}
 ## Concurrency Safety
 
 Before modifying any file, check its modification time. If the file was
@@ -1546,11 +1580,15 @@ export async function renderPrompts(
 export async function renderContext(
   gardenerDir: string,
   config: GardenerConfig,
+  extras?: RenderExtras,
 ): Promise<void> {
   await mkdir(gardenerDir, { recursive: true });
 
   const render = compile('context');
-  const output = render(config);
+  const context = extras?.indexSummary
+    ? { ...config, _indexSummary: extras.indexSummary }
+    : config;
+  const output = render(context);
   await writeFile(join(gardenerDir, 'context.md'), output, 'utf-8');
 }
 
@@ -1560,9 +1598,10 @@ export async function renderContext(
 export async function renderAll(
   gardenerDir: string,
   config: GardenerConfig,
+  extras?: RenderExtras,
 ): Promise<void> {
   await Promise.all([
-    renderContext(gardenerDir, config),
+    renderContext(gardenerDir, config, extras),
     renderPrompts(gardenerDir, config),
   ]);
 }
