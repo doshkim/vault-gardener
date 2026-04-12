@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.3.1] - 2026-04-12
+
+### Added
+- `manual` status — notes with `status: manual` are skipped entirely by the gardener (no enrichment, linking, or frontmatter changes). Unlike `archived`, signals the user actively maintains the note themselves.
+
 ## [0.3.0] - 2026-04-06
 
 ### Added

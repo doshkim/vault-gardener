@@ -1,6 +1,6 @@
 {
   "name": "vault-gardener",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "AI-powered vault maintenance pipeline for markdown knowledge bases. Seed → Nurture → Tend.",
   "type": "module",
   "bin": {
