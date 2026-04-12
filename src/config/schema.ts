@@ -240,7 +240,7 @@ export function buildDefaultConfig(overrides: Partial<GardenerConfig> = {}): Gar
     },
     frontmatter: {
       required: ['created', 'updated', 'tags', 'status', 'type'],
-      statuses: ['seed', 'growing', 'evergreen', 'archived', 'consolidated'],
+      statuses: ['seed', 'growing', 'evergreen', 'archived', 'consolidated', 'manual'],
       types: ['journal', 'project', 'role', 'resource', 'person', 'org', 'meeting', 'idea', 'playbook', 'moc'],
     },
     schedule: {

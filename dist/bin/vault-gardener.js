@@ -586,6 +586,7 @@ Keywords: {{#each this}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}
 \`\`\`
 seed \u2192 growing \u2192 evergreen \u2192 archived       (all notes)
 seed \u2192 consolidated                          (event journals, after Store items processed)
+manual                                       (opt-out \u2014 user-managed, gardener never touches)
 \`\`\`
 
 | Status | Gardener behavior |
@@ -595,12 +596,14 @@ seed \u2192 consolidated                          (event journals, after Store i
 | **evergreen** | Passive. Only adds back-links. Does NOT modify content. |
 | **archived** | Ignored. Gardener skips entirely. |
 | **consolidated** | Event journals only. All Store items processed. Gardener skips. |
+| **manual** | User-managed. Gardener skips entirely. Use for notes you maintain yourself. |
 
 ### What the gardener NEVER does:
 - Never deletes any note
 - Never auto-archives (only suggests)
 - Never demotes status
 - Never modifies evergreen content (only adds back-links in See Also)
+- Never touches manual notes (not even back-links)
 
 ## File Naming
 
@@ -2067,7 +2070,7 @@ function buildDefaultConfig(overrides = {}) {
     },
     frontmatter: {
       required: ["created", "updated", "tags", "status", "type"],
-      statuses: ["seed", "growing", "evergreen", "archived", "consolidated"],
+      statuses: ["seed", "growing", "evergreen", "archived", "consolidated", "manual"],
       types: ["journal", "project", "role", "resource", "person", "org", "meeting", "idea", "playbook", "moc"]
     },
     schedule: {

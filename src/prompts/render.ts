@@ -117,6 +117,7 @@ Keywords: {{#each this}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}
 \`\`\`
 seed → growing → evergreen → archived       (all notes)
 seed → consolidated                          (event journals, after Store items processed)
+manual                                       (opt-out — user-managed, gardener never touches)
 \`\`\`
 
 | Status | Gardener behavior |
@@ -126,12 +127,14 @@ seed → consolidated                          (event journals, after Store item
 | **evergreen** | Passive. Only adds back-links. Does NOT modify content. |
 | **archived** | Ignored. Gardener skips entirely. |
 | **consolidated** | Event journals only. All Store items processed. Gardener skips. |
+| **manual** | User-managed. Gardener skips entirely. Use for notes you maintain yourself. |
 
 ### What the gardener NEVER does:
 - Never deletes any note
 - Never auto-archives (only suggests)
 - Never demotes status
 - Never modifies evergreen content (only adds back-links in See Also)
+- Never touches manual notes (not even back-links)
 
 ## File Naming
 
